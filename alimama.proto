@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package alimama.proto;
+
+message SliceRequest {
+    uint64 slice_partition = 1;
+    uint64 data_start = 2;
+    uint64 data_len = 3;
+}
+
+message Request {
+  repeated SliceRequest slice_request = 1;
+}
+
+message Response {
+  int32 status = 1; // 0，返回结果ok，-1 服务发生内部错误
+  repeated bytes slice_data = 2;
+}
+
+service ModelService {
+  rpc Get(Request) returns (Response) {}
+}
+
+
+//按照version进入版本文件夹，读取指定slice
+//load完slice后，根据block_info将buffer中的data发往指定节点
+message BlockInfo{
+  uint64 slice_partition = 1;
+  uint64 index = 2;
+  uint32 node_id1 = 3;
+  uint32 node_id2 = 4;
+}
+message SliceInfo {
+  string version = 1;
+  uint64 slice_partition = 2;
+  repeated BlockInfo block_info = 3;
+}
+
+message Slice2BlockRequest{
+  repeated SliceInfo slice_info = 1;
+}
+
+message Slice2BlockResponse{
+  bool ok = 1;
+}
+
+service Slice2BlockService{
+  rpc Get(Slice2BlockRequest) returns (Slice2BlockResponse) {}
+}
+
+//发送data_info,读取指定块，返回块的data
+message BlockData{
+  uint64 slice_partition = 1;
+  uint64 block_index = 2;
+  bytes data = 3;
+}
+
+message GetBlockDataRequest{
+  repeated BlockInfo block_info = 1;
+}
+
+message GetBlockDataResponse{
+  repeated BlockData block_data = 1;
+}
+service GetBlockService{
+  rpc Get(GetBlockDataRequest) returns (GetBlockDataResponse) {}
+}
+//节点读取slice后将副本传向指定节点
+message SendCopyRequest{
+  BlockData block_data = 1;
+}
+
+message SendCopyResponse{
+  bool ok = 1;
+}
+
+service SendCopyService{
+  rpc Get(SendCopyRequest) returns (SendCopyResponse) {}
+}
+//节点先执行指定的slice读取与block发送
+//发送完后回复pd，等待1秒后将对应旧版本的block删除
+message LoadAndRemoveRequest {
+  SliceInfo slice_info = 1;
+}
+message LoadAndRemoveResponse {
+  bool ok = 1;
+}
+service LoadAndRemoveService {
+  rpc Get(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
+}
+//load到slice的节点向其余节点发送remove请求，删除指定slice的块
+//！！！！！！！！！！！由于要根据slice删除块，所以节点存储需要按slice分别hash！！！！！！！！！！
+message RemoveBlockRequest{
+  repeated uint64 slice_partition = 1;
+}
+message RemoveBlockResponse{
+  bool ok = 1;
+}
+service RemoveBlockService{
+  rpc Get(RemoveBlockRequest) returns (RemoveBlockResponse){}
+}
+//第二次的loadandremove回复完后
+//等待1s
+//向pd发送可以切换版本的请求。
+message SwitchRequest {
+  bool ok = 1;
+}
+message SwitchResponse {
+  bool ok = 1;
+}
+service SwitchService {
+  rpc Get(SwitchRequest) returns (SwitchResponse) {}
+}
