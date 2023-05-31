@@ -184,26 +184,29 @@ struct TestMaxQpsConfig {
 }; 
 
 ModelServiceGprcBenchmark::SummaryType TestMaxQps(std::vector<std::string> services, const TestMaxQpsConfig& cfg, double& max_qps) {
-  double qps_limit = cfg.qps_baseline;
+  double qps_limit = cfg.qps_baseline;//2000
   double last_qps = 0;
   max_qps = 0;
 
   ModelServiceGprcBenchmark::SummaryType last_summary;
-  for (size_t i = 0; i<cfg.max_iter_times; ++i) {
+  for (size_t i = 0; i<cfg.max_iter_times; ++i) {//迭代次数50
     auto clis = ModelServiceGprcClient::CreateClients(services, cfg.thread_num);
     if (clis.size() == 0) return last_summary;
 
     ModelServiceGprcBenchmark bench(clis, compare_result_dummy, cfg.timeout_ms, int32_t(qps_limit));
-    int64_t request_times = qps_limit * cfg.request_duration_each_iter_sec;
+    int64_t request_times = qps_limit * cfg.request_duration_each_iter_sec;//2000*10
     auto start = std::chrono::steady_clock::now();
     double elapsedtime_popdata_ms_all = 0;
-    for (size_t j = 0; j < request_times; ++j) {
+    for (size_t j = 0; j < request_times; ++j) {//请求两万次
       auto popdata = std::chrono::steady_clock::now();
       auto req = std::make_shared<alimama::proto::Request>();
       // pair.response = std::make_shared<alimama::proto::Response>();
+      //通过使用 mutable_slice_request() 方法可以获得一个指向 slice_request 字段的指针，
+      // 并通过调用 Reserve(1000) 方法来为该字段预留内存空间。
       req->mutable_slice_request()->Reserve(1000);
-      for (int i = 0; i < 1000; ++i) {
+      for (int i = 0; i < 1000; ++i) {//slice_request增加一千个slice请求
         alimama::proto::SliceRequest* slice = req->add_slice_request();
+        //设置slice请求参数
         slice->set_slice_partition(i);
         slice->set_data_start(i);
         slice->set_data_len(16);
@@ -216,19 +219,19 @@ ModelServiceGprcBenchmark::SummaryType TestMaxQps(std::vector<std::string> servi
         break;
       }
     }
-    auto not_timeout = bench.WaitAllUntilTimeout(cfg.request_duration_each_iter_sec * 1000);
+    auto not_timeout = bench.WaitAllUntilTimeout(cfg.request_duration_each_iter_sec * 1000);//等待所有的请求返回直到超时
     auto end = std::chrono::steady_clock::now();
     auto elapsedtime_ms = std::chrono::duration<double, std::milli>(end - start).count();
 
     auto summary = bench.Summary();
-    double QPS = summary.success_request_count / (elapsedtime_ms / 1000);
+    double QPS = summary.success_request_count / (elapsedtime_ms / 1000);//成功的请求/秒数
     BOOST_LOG_TRIVIAL(info)  << "timeout: " << !not_timeout << " elapsedtime_ms: " << elapsedtime_ms << " elapsedtime_popdata_ms " << elapsedtime_popdata_ms_all << " QPS " << QPS ;
 
     last_qps = QPS;
     max_qps = last_qps > max_qps ? last_qps : max_qps;
     last_summary = summary;
 
-    if (summary.success_request_percent < cfg.success_percent_th) {
+    if (summary.success_request_percent < cfg.success_percent_th) {//
       qps_limit = qps_limit - qps_limit * cfg.qps_step_size_percent;
     } else {
       qps_limit = qps_limit + qps_limit * cfg.qps_step_size_percent;
@@ -242,6 +245,7 @@ ModelServiceGprcBenchmark::SummaryType TestMaxQps(std::vector<std::string> servi
 }
 
 std::vector<std::string> setupModelService() {
+    //根据etcd找到并返回提供服务的地址和端口
   std::vector<std::string> services{};
   etcd::Client etcd("http://etcd:2379");
   std::string prefix = "/services/modelservice/";
@@ -264,6 +268,7 @@ int main() {
   BOOST_LOG_TRIVIAL(info)  << "TestMaxQps ";
   auto services = setupModelService();
   double max_qps = 0;
+  //创建一个名为 cli 的智能指针对象，指向一个使用 services 参数初始化的 ModelServiceGprcClient 对象。
   GrpcClientPtr cli = std::make_shared<ModelServiceGprcClient>(services);
   TestMaxQpsConfig cfg;
   auto summary = TestMaxQps(services, cfg, max_qps);
