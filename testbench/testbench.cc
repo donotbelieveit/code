@@ -13,6 +13,7 @@
 #include <boost/lockfree/queue.hpp>
 #include <grpcpp/grpcpp.h>
 #include "alimama.grpc.pb.h"
+#include "alimama.pb.h"
 
 #include "grpc_benchmark.h"
 
@@ -200,6 +201,7 @@ ModelServiceGprcBenchmark::SummaryType TestMaxQps(std::vector<std::string> servi
     for (size_t j = 0; j < request_times; ++j) {//请求两万次
       auto popdata = std::chrono::steady_clock::now();
       auto req = std::make_shared<alimama::proto::Request>();
+      alimama::proto::Gre
       // pair.response = std::make_shared<alimama::proto::Response>();
       //通过使用 mutable_slice_request() 方法可以获得一个指向 slice_request 字段的指针，
       // 并通过调用 Reserve(1000) 方法来为该字段预留内存空间。
