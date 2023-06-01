@@ -22,8 +22,7 @@ service ModelService {
 }
 
 
-//按照version进入版本文件夹，读取指定slice
-//load完slice后，根据block_info将buffer中的data发往指定节点
+
 message BlockInfo{
   uint64 slice_partition = 1;
   uint64 index = 2;
@@ -44,11 +43,20 @@ message Slice2BlockResponse{
   bool ok = 1;
 }
 
-service Slice2BlockService{
-  rpc Get(Slice2BlockRequest) returns (Slice2BlockResponse) {}
+service PDService{
+  //按照version进入版本文件夹，读取指定slice
+  //load完slice后，根据block_info将buffer中的data发往指定节点
+  rpc Slice2Block(Slice2BlockRequest) returns (Slice2BlockResponse) {}
+  //发送读取请求节点根据data_info读取指定块，返回块的data
+  rpc GetBlockData(GetBlockDataRequest) returns (GetBlockDataResponse) {}
+  //节点先执行指定的slice读取与block发送
+  //发送完后回复pd，等待2秒后将对应旧版本的block删除
+  //load到slice的节点向其余节点发送remove请求，删除指定slice的块
+  //！！！！！！！！！！！由于要根据slice删除块，所以节点存储需要按slice分组分别hash！！！！！！！！！！
+  rpc LoadAndRemove(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
 }
 
-//发送data_info,读取指定块，返回块的data
+
 message BlockData{
   uint64 slice_partition = 1;
   uint64 block_index = 2;
@@ -62,10 +70,7 @@ message GetBlockDataRequest{
 message GetBlockDataResponse{
   repeated BlockData block_data = 1;
 }
-service GetBlockService{
-  rpc Get(GetBlockDataRequest) returns (GetBlockDataResponse) {}
-}
-//节点读取slice后将副本传向指定节点
+
 message SendCopyRequest{
   BlockData block_data = 1;
 }
@@ -74,22 +79,23 @@ message SendCopyResponse{
   bool ok = 1;
 }
 
-service SendCopyService{
-  rpc Get(SendCopyRequest) returns (SendCopyResponse) {}
+service NodeService{
+  //节点读取slice后将副本传向指定节点
+  rpc SendCopy(SendCopyRequest) returns (SendCopyResponse) {}
+  //第二次的loadandremove回复完后
+  //等待1s
+  //向pd发送可以切换版本的请求。
+  rpc Ready2Switch(SwitchRequest) returns (SwitchResponse) {}
+  
 }
-//节点先执行指定的slice读取与block发送
-//发送完后回复pd，等待1秒后将对应旧版本的block删除
+
 message LoadAndRemoveRequest {
   SliceInfo slice_info = 1;
 }
 message LoadAndRemoveResponse {
   bool ok = 1;
 }
-service LoadAndRemoveService {
-  rpc Get(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
-}
-//load到slice的节点向其余节点发送remove请求，删除指定slice的块
-//！！！！！！！！！！！由于要根据slice删除块，所以节点存储需要按slice分别hash！！！！！！！！！！
+
 message RemoveBlockRequest{
   repeated uint64 slice_partition = 1;
 }
@@ -99,15 +105,10 @@ message RemoveBlockResponse{
 service RemoveBlockService{
   rpc Get(RemoveBlockRequest) returns (RemoveBlockResponse){}
 }
-//第二次的loadandremove回复完后
-//等待1s
-//向pd发送可以切换版本的请求。
+
 message SwitchRequest {
   bool ok = 1;
 }
 message SwitchResponse {
   bool ok = 1;
-}
-service SwitchService {
-  rpc Get(SwitchRequest) returns (SwitchResponse) {}
 }
