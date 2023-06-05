@@ -43,24 +43,13 @@ message Slice2BlockResponse{
   bool ok = 1;
 }
 
-service PDService{
-  //按照version进入版本文件夹，读取指定slice
-  //load完slice后，根据block_info将buffer中的data发往指定节点
-  rpc Slice2Block(Slice2BlockRequest) returns (Slice2BlockResponse) {}
-  //发送读取请求节点根据data_info读取指定块，返回块的data
-  rpc GetBlockData(GetBlockDataRequest) returns (GetBlockDataResponse) {}
-  //节点先执行指定的slice读取与block发送
-  //发送完后回复pd，等待2秒后将对应旧版本的block删除
-  //load到slice的节点向其余节点发送remove请求，删除指定slice的块
-  //！！！！！！！！！！！由于要根据slice删除块，所以节点存储需要按slice分组分别hash！！！！！！！！！！
-  rpc LoadAndRemove(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
-}
-
 
 message BlockData{
   uint64 slice_partition = 1;
   uint64 block_index = 2;
-  bytes data = 3;
+  string node1 = 3;
+  string node2 = 4;
+  bytes data = 5;
 }
 
 message GetBlockDataRequest{
@@ -80,13 +69,22 @@ message SendCopyResponse{
 }
 
 service NodeService{
+  //发送读取请求节点根据data_info读取指定块，返回块的data
+  rpc GetBlockData(GetBlockDataRequest) returns (GetBlockDataResponse) {}
   //节点读取slice后将副本传向指定节点
   rpc SendCopy(SendCopyRequest) returns (SendCopyResponse) {}
-  //第二次的loadandremove回复完后
-  //等待1s
-  //向pd发送可以切换版本的请求。
-  rpc Ready2Switch(SwitchRequest) returns (SwitchResponse) {}
-  
+  //load新版本的slice并发送第一副本
+  //各节点接收到第一副本后向pd发送ok，等待1s，
+  //pd将包含旧版本第二副本的所有请求回复
+  //node将旧版本第二副本删除
+  //node将第二副本发送给指定节点
+  //接受完成后向pd发送ok，等待1s
+  //pd将所有包含旧版本请求回复
+  //系统进入新版本
+  rpc LoadAndRemove(LoadAndRemoveRequest) returns (stream LoadAndRemoveResponse) {}
+  //按照version进入版本文件夹，读取指定slice
+  //load完slice后，根据block_info将buffer中的data发往指定节点
+  rpc Slice2Block(Slice2BlockRequest) returns (Slice2BlockResponse) {}
 }
 
 message LoadAndRemoveRequest {
@@ -96,19 +94,5 @@ message LoadAndRemoveResponse {
   bool ok = 1;
 }
 
-message RemoveBlockRequest{
-  repeated uint64 slice_partition = 1;
-}
-message RemoveBlockResponse{
-  bool ok = 1;
-}
-service RemoveBlockService{
-  rpc Get(RemoveBlockRequest) returns (RemoveBlockResponse){}
-}
 
-message SwitchRequest {
-  bool ok = 1;
-}
-message SwitchResponse {
-  bool ok = 1;
-}
+
