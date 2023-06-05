@@ -18,6 +18,7 @@
 
 #include "grpc_benchmark.h"
 
+
 #define BOOST_LOG_DYN_LINK 1
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
@@ -75,6 +76,7 @@ public:
       }
       clients.push_back(cli);
     }
+    
     return clients;
   };
 
