@@ -109,7 +109,7 @@ public:
       stubs_[idx]->AsyncGet(ctx.get(), *req, cq_.get()));
     ResponsePtr resp = std::make_shared<Response>();
     auto status = std::make_shared<Status>();
-    auto* item = new RequestItem{obj,ctx,  req, resp, status};
+    auto* item = new RequestItem{obj,ctx,  req, resp, status};//在这里放入请求和响应！
     rpc->Finish(resp.get(), status.get(), (void*)item);
     return true;
   }
@@ -170,7 +170,7 @@ struct versions
 };
 
 bool compare_result_dummy(const ResponsePtr& resp, const RequestPtr& ref,CustomSummary & result) {
-  versions v;
+  std::string version = "model_2023_03_01_13_00_00";
   ModelSliceReader A;
   if (!resp) {
     BOOST_LOG_TRIVIAL(warning)  << "resp is null ";
@@ -193,22 +193,105 @@ bool compare_result_dummy(const ResponsePtr& resp, const RequestPtr& ref,CustomS
       uint64_t slicePartition = sliceRequest.slice_partition();
       uint64_t dataStart = sliceRequest.data_start();
       uint64_t dataLen = sliceRequest.data_len();
-      if (i <= 9) {
-          A.Load("./" + v.old_version + "/model_slice.0" + std::to_string(i));
+      if (slicePartition <= 9) {
+          A.Load("./" + "model_2023_03_01_13_00_00" + "/model_slice.0" + std::to_string(slicePartition));
       } else {
-          A.Load("./" + v.old_version + "/model_slice." + std::to_string(i));
+          A.Load("./" + "model_2023_03_01_13_00_00" + "/model_slice." + std::to_string(slicePartition));
       }
       char buf[128] = {0};
-      A.Read(i, 16, buf);
+      A.Read(dataStart, dataLen, buf);
       if(buf!=resp->slice_data(i)){
         BOOST_LOG_TRIVIAL(warning)  << "data is not equal! ";
         return true;
       }
     
   }
-
-
   return true;
+}
+
+bool compare_change_version_result(const ResponsePtr& resp, const RequestPtr& ref,CustomSummary & result){
+  std::string version1 = "model_2023_03_01_13_00_00";
+  std::string version2 = "model_2023_03_01_13_30_00";
+  int new_version = -1;
+  ModelSliceReader new_v,old_v;
+  if (!resp) {
+    BOOST_LOG_TRIVIAL(warning)  << "resp is null ";
+    return true;
+  }
+  if (!ref) {
+    BOOST_LOG_TRIVIAL(warning)  << "ref is null ";
+    return true;
+  }
+  if (resp->status()=-1){
+    BOOST_LOG_TRIVIAL(warning)  << "resp error ";
+    return true;
+  }
+  auto req = (alimama::proto::Request*) ref;
+  int sliceRequestCount = req->slice_request_size();
+  // 遍历 slice_request 数组
+  for (int i = 0; i < sliceRequestCount; ++i) {
+    const SliceRequest& sliceRequest = req->slice_request(i);
+      // 在这里处理每个 SliceRequest 对象
+      uint64_t slicePartition = sliceRequest.slice_partition();
+      uint64_t dataStart = sliceRequest.data_start();
+      uint64_t dataLen = sliceRequest.data_len();
+      if(new_version==-1){
+        if (slicePartition <= 9) {
+            old_v.Load("./" + version1 + "/model_slice.0" + std::to_string(slicePartition));
+            new_v.Load("./" + version2 + "/model_slice.0" + std::to_string(slicePartition));
+
+        } else {
+            old_v.Load("./" + version1 + "/model_slice." + std::to_string(slicePartition));
+            new_v.Load("./" + version2 + "/model_slice." + std::to_string(slicePartition));
+        }
+        char buf_old[128] = {0};
+        char buf_new[128] = {0};
+        old_v.read(dataStart,dataLen,buf_old);
+        new_v.read(dataStart,dataLen,buf_new);
+        if(resp->slice_data(i)!=buf_old&&resp->slice_data(i)!=buf_new){
+          BOOST_LOG_TRIVIAL(warning)  << "all versions' data is not equal! ";
+          return;
+        }
+        if(resp->slice_data(i)==buf_old&&resp->slice_data(i)==buf_new){
+          continue;
+        }
+        if(resp->slice_data(i)==buf_old&&resp->slice_data(i)!=buf_new){
+          new_version=0;
+          BOOST_LOG_TRIVIAL(info)  << "check old version's data ";
+          continue;
+        }else{
+          new version=1;
+          BOOST_LOG_TRIVIAL(info)  << "check new version's data ";
+          continue;
+        }
+      }else if(new_version==0){
+        if (slicePartition <= 9) {
+            old_v.Load("./" + version1 + "/model_slice.0" + std::to_string(slicePartition));
+        } else {
+            old_v.Load("./" + version1 + "/model_slice." + std::to_string(slicePartition));
+        }
+        char buf[128] = {0};
+        old_v.Read(dataStart, dataLen, buf);
+        if(buf!=resp->slice_data(i)){
+          BOOST_LOG_TRIVIAL(warning)  << "old data is not equal! ";
+          return true;
+        }
+      }else{
+        if (slicePartition <= 9) {
+            new_v.Load("./" + version2 + "/model_slice.0" + std::to_string(slicePartition));
+        } else {
+            new_v.Load("./" + version2 + "/model_slice." + std::to_string(slicePartition));
+        }
+        char buf[128] = {0};
+        new_v.Read(dataStart, dataLen, buf);
+        if(buf!=resp->slice_data(i)){
+          BOOST_LOG_TRIVIAL(warning)  << "new data is not equal! ";
+          return true;
+        }
+      }
+  }
+  return true;
+
 }
 
 bool compare_result(const RequestPtr& req, const ResponsePtr& resp, const RequestPtr& ref, CustomSummary& result) {
@@ -232,133 +315,6 @@ struct TestMaxQpsConfig {
   double success_percent_th = 0.99;
   double qps_step_size_percent = 0.1;
 };
-
-void TestVersionChange(std::vector<std::string> services, std::string version1, std::string version2){
-    int max_iter_times = 50, threadNum = 6;
-    std::vector<std::string> vector1, vector2;
-    ModelSliceReader A;
-    for (int i = 0; i < 20; i++) {
-        if (i <= 9) {
-            A.Load("./" + version1 + "/model_slice.0" + std::to_string(i));
-        } else {
-            A.Load("./" + version1 + "/model_slice." + std::to_string(i));
-        }
-        char buf[128] = {0};
-        A.Read(i, 20, buf);
-        std::string str(buf);
-        vector1.push_back(str);
-        A.unload();
-    }
-    for (int i = 0; i < 20; i++) {
-        if (i <= 9) {
-            A.Load("./" + version2 + "/model_slice.0" + std::to_string(i));
-        } else {
-            A.Load("./" + version2 + "/model_slice." + std::to_string(i));
-        }
-        char buf[128] = {0};
-        A.Read(i, 20, buf);
-        std::string str(buf);
-        vector2.push_back(str);
-        A.unload();
-    }
-    for (size_t i = 0; i < max_iter_times; ++i) {
-        auto req = std::make_shared<alimama::proto::Request>();。
-        req->mutable_slice_request()->Reserve(20);
-        auto clis = ModelServiceGprcClient::CreateClients(services, threadNum);
-        for (int i = 0; i < 20; ++i) {
-            alimama::proto::SliceRequest* slice = req->add_slice_request();
-            //设置slice请求参数
-            slice->set_slice_partition(i);
-            slice->set_data_start(i);
-            slice->set_data_len(20);
-        }
-        for (int i = 0; i < threadNum; i++) {
-            ClientContext context;
-            void *obj = (void *) &i;
-            int version = 0;
-            clis[i]->Request(&context, req, obj);
-            ResponsePtr resp = static_cast<RequestItem*>(obj)->resp;
-            std::vector<std::string> sliceData = resp->slice_data();
-            for (int j = 0; j < 20; ++j) {
-                if(vector1[j]==vector2[j]) {
-                    if (sliceData[j] != vector1[j]) {
-                        BOOST_LOG_TRIVIAL(error)  << " data is not match!";
-                        return;
-                    }
-                }
-                if (vector1[j] != vector2[j]) {
-                    if (version == 0) {
-                        if (sliceData[j] == vector1[j]) {
-                            version = 1;
-                        } else if (sliceData[j] == vector2[j]) {
-                            version = 2;
-                        } else {
-                            BOOST_LOG_TRIVIAL(error)  << " data is not match!";
-                            return;
-                        }
-                    }
-                    if (version == 1 && sliceData[j] != vector1[j]) {
-                        BOOST_LOG_TRIVIAL(error)  << " data is not match!";
-                        return;
-                    }
-                    if (version == 2 && sliceData[j] != vector2[j]) {
-                        BOOST_LOG_TRIVIAL(error)  << " data is not match!";
-                        return;
-                    }
-                }
-            }
-        }
-        BOOST_LOG_TRIVIAL(info)  << "data is  match!";
-    }
-
-}
-void TestCorrect(std::vector<std::string> services,std::string version){
-    int max_iter_times = 50, threadNum = 6;
-    std::vector<std::string> vector;
-    ModelSliceReader A;
-    for (int i = 0; i < 20; i++) {
-        if (i <= 9) {
-            A.Load("./" + version + "/model_slice.0" + std::to_string(i));
-        } else {
-            A.Load("./" + version + "/model_slice." + std::to_string(i));
-        }
-        char buf[128] = {0};
-        A.Read(i, 20, buf);
-        std::string str(buf);
-        vector.push_back(str);
-        A.unload();
-    }
-    for (size_t i = 0; i < max_iter_times; ++i) {
-        auto req = std::make_shared<alimama::proto::Request>();
-        // pair.response = std::make_shared<alimama::proto::Response>();
-        //通过使用 mutable_slice_request() 方法可以获得一个指向 slice_request 字段的指针，
-        // 并通过调用 Reserve(1000) 方法来为该字段预留内存空间。
-        req->mutable_slice_request()->Reserve(20);
-        auto clis = ModelServiceGprcClient::CreateClients(services, threadNum);
-        for (int i = 0; i < 20; ++i) {
-            alimama::proto::SliceRequest* slice = req->add_slice_request();
-            //设置slice请求参数
-            slice->set_slice_partition(i);
-            slice->set_data_start(i);
-            slice->set_data_len(20);
-        }
-        for (int i = 0; i < threadNum; i++) {
-            ClientContext context;
-            void *obj = (void *) &i;
-            clis[i]->Request(&context, req, obj);
-            ResponsePtr resp = static_cast<RequestItem*>(obj)->resp;
-            std::vector<std::string> sliceData = resp->slice_data();
-            for (int j = 0; j < 20; ++j) {
-                if (sliceData[j] != vector[j]) {
-                    BOOST_LOG_TRIVIAL(error)  << " data is not match!";
-                    return;
-                }
-            }
-        }
-        BOOST_LOG_TRIVIAL(info)  << "data is  match!";
-    }
-}
-
 
 
 ModelServiceGprcBenchmark::SummaryType TestMaxQps(std::vector<std::string> services, const TestMaxQpsConfig& cfg, double& max_qps) {
@@ -393,7 +349,7 @@ ModelServiceGprcBenchmark::SummaryType TestMaxQps(std::vector<std::string> servi
       // pair.response = std::make_shared<alimama::proto::Response>();
       auto popdataend = std::chrono::steady_clock::now();
       elapsedtime_popdata_ms_all += std::chrono::duration<double, std::milli>(popdataend - popdata).count();
-      if (!bench.Request(i, req, resp)) {
+      if (!bench.Request(i, req, req)) {
         BOOST_LOG_TRIVIAL(error)  << "request data failed";
         break;
       }
