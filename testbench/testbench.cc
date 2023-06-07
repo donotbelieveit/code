@@ -161,13 +161,6 @@ void dump_summary(const ModelServiceGprcBenchmark::SummaryType& summary, double 
   BOOST_LOG_TRIVIAL(info)  << "summary timeout_request_count " << summary.timeout_request_count;
 }
 
-struct versions
-{
-  /* data */
-  std::string old_version = "model_2023_03_01_13_00_00"
-  std::string new_version = "model_2023_03_01_13_30_00"
-  std::string rollback_version = "model_2023_03_01_12_30_00"
-};
 
 bool compare_result_dummy(const ResponsePtr& resp, const RequestPtr& ref,CustomSummary & result) {
   std::string version = "model_2023_03_01_13_00_00";
@@ -180,23 +173,23 @@ bool compare_result_dummy(const ResponsePtr& resp, const RequestPtr& ref,CustomS
     BOOST_LOG_TRIVIAL(warning)  << "ref is null ";
     return true;
   }
-  if (resp->status()=-1){
+  if (resp->status()==-1){
     BOOST_LOG_TRIVIAL(warning)  << "resp error ";
     return true;
   }
-  auto req = (alimama::proto::Request*) ref;
+  auto req = (alimama::proto::Request*) ref.get();
   int sliceRequestCount = req->slice_request_size();
   // 遍历 slice_request 数组
   for (int i = 0; i < sliceRequestCount; ++i) {
-      const SliceRequest& sliceRequest = req->slice_request(i);
+      const alimama::proto::SliceRequest sliceRequest = req->slice_request(i);
       // 在这里处理每个 SliceRequest 对象
       uint64_t slicePartition = sliceRequest.slice_partition();
       uint64_t dataStart = sliceRequest.data_start();
       uint64_t dataLen = sliceRequest.data_len();
       if (slicePartition <= 9) {
-          A.Load("./" + "model_2023_03_01_13_00_00" + "/model_slice.0" + std::to_string(slicePartition));
+          A.Load("./model_2023_03_01_13_00_00/model_slice.0" + std::to_string(slicePartition));
       } else {
-          A.Load("./" + "model_2023_03_01_13_00_00" + "/model_slice." + std::to_string(slicePartition));
+          A.Load("./model_2023_03_01_13_00_00/model_slice." + std::to_string(slicePartition));
       }
       char buf[128] = {0};
       A.Read(dataStart, dataLen, buf);
@@ -222,15 +215,15 @@ bool compare_change_version_result(const ResponsePtr& resp, const RequestPtr& re
     BOOST_LOG_TRIVIAL(warning)  << "ref is null ";
     return true;
   }
-  if (resp->status()=-1){
+  if (resp->status()==-1){
     BOOST_LOG_TRIVIAL(warning)  << "resp error ";
     return true;
   }
-  auto req = (alimama::proto::Request*) ref;
+  auto req = (alimama::proto::Request*) ref.get();
   int sliceRequestCount = req->slice_request_size();
   // 遍历 slice_request 数组
   for (int i = 0; i < sliceRequestCount; ++i) {
-    const SliceRequest& sliceRequest = req->slice_request(i);
+    const alimama::proto::SliceRequest sliceRequest = req->slice_request(i);
       // 在这里处理每个 SliceRequest 对象
       uint64_t slicePartition = sliceRequest.slice_partition();
       uint64_t dataStart = sliceRequest.data_start();
@@ -246,11 +239,11 @@ bool compare_change_version_result(const ResponsePtr& resp, const RequestPtr& re
         }
         char buf_old[128] = {0};
         char buf_new[128] = {0};
-        old_v.read(dataStart,dataLen,buf_old);
-        new_v.read(dataStart,dataLen,buf_new);
+        old_v.Read(dataStart,dataLen,buf_old);
+        new_v.Read(dataStart,dataLen,buf_new);
         if(resp->slice_data(i)!=buf_old&&resp->slice_data(i)!=buf_new){
           BOOST_LOG_TRIVIAL(warning)  << "all versions' data is not equal! ";
-          return;
+          return true;
         }
         if(resp->slice_data(i)==buf_old&&resp->slice_data(i)==buf_new){
           continue;
@@ -260,7 +253,7 @@ bool compare_change_version_result(const ResponsePtr& resp, const RequestPtr& re
           BOOST_LOG_TRIVIAL(info)  << "check old version's data ";
           continue;
         }else{
-          new version=1;
+          new_version=1;
           BOOST_LOG_TRIVIAL(info)  << "check new version's data ";
           continue;
         }
@@ -392,6 +385,7 @@ std::vector<std::string> setupModelService() {
       return services;
   }
   while (response.keys().size() == 0) {
+      BOOST_LOG_TRIVIAL(info) <<  "waiting for etcd ready...... ";
       response = etcd.keys(prefix).get();
       std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
@@ -402,11 +396,15 @@ std::vector<std::string> setupModelService() {
   }
   return services;
 }
+void Command(std::string command) {
+	std::cout << "command: " << command << std::endl;
+	std::system(command.c_str());
+}
 int main() {
   logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
-  versions v;
+  
   BOOST_LOG_TRIVIAL(info)  << "TestMaxQps ";
-  Command("hdfs dfs -fs hdfs://namenode:9000/ -mv /backup/"+v.old_version+" /");
+  Command("hdfs dfs -fs hdfs://namenode:9000/ -mv /backup/model_2023_03_01_13_00_00 /");
   auto services = setupModelService();
   double max_qps = 0;
   //创建一个名为 cli 的智能指针对象，指向一个使用 services 参数初始化的 ModelServiceGprcClient 对象。

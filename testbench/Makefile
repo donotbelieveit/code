@@ -10,7 +10,7 @@ LDFLAGS += -L/usr/local/lib `pkg-config --libs protobuf grpc++`\
            -Wl,--no-as-needed -lgrpc++_reflection -Wl,--as-needed\
 					 -lboost_log\
            -ldl 
-LDFLAGS += -lpthread -letcd-cpp-api -lprotobuf -lgrpc++ -lgrpc -lz -lcpprest -lssl -lcrypto -lboost_system  -L${HADOOP_HOME}/lib/native/ -lhdfs 
+LDFLAGS += -lpthread -letcd-cpp-api -lprotobuf -lgrpc++ -lgrpc -lz -lcpprest -lssl -lcrypto -lboost_system -lmodel_slice_reader -L${HADOOP_HOME}/lib/native/ -lhdfs 
 #CXX = clang++
 #CXX = clang++
 
