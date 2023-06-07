@@ -161,7 +161,53 @@ void dump_summary(const ModelServiceGprcBenchmark::SummaryType& summary, double 
   BOOST_LOG_TRIVIAL(info)  << "summary timeout_request_count " << summary.timeout_request_count;
 }
 
-bool compare_result_dummy(const ResponsePtr& resp, const RequestPtr& ref, CustomSummary& result) {
+struct versions
+{
+  /* data */
+  std::string old_version = "model_2023_03_01_13_00_00"
+  std::string new_version = "model_2023_03_01_13_30_00"
+  std::string rollback_version = "model_2023_03_01_12_30_00"
+};
+
+bool compare_result_dummy(const ResponsePtr& resp, const RequestPtr& ref,CustomSummary & result) {
+  versions v;
+  ModelSliceReader A;
+  if (!resp) {
+    BOOST_LOG_TRIVIAL(warning)  << "resp is null ";
+    return true;
+  }
+  if (!ref) {
+    BOOST_LOG_TRIVIAL(warning)  << "ref is null ";
+    return true;
+  }
+  if (resp->status()=-1){
+    BOOST_LOG_TRIVIAL(warning)  << "resp error ";
+    return true;
+  }
+  auto req = (alimama::proto::Request*) ref;
+  int sliceRequestCount = req->slice_request_size();
+  // 遍历 slice_request 数组
+  for (int i = 0; i < sliceRequestCount; ++i) {
+      const SliceRequest& sliceRequest = req->slice_request(i);
+      // 在这里处理每个 SliceRequest 对象
+      uint64_t slicePartition = sliceRequest.slice_partition();
+      uint64_t dataStart = sliceRequest.data_start();
+      uint64_t dataLen = sliceRequest.data_len();
+      if (i <= 9) {
+          A.Load("./" + v.old_version + "/model_slice.0" + std::to_string(i));
+      } else {
+          A.Load("./" + v.old_version + "/model_slice." + std::to_string(i));
+      }
+      char buf[128] = {0};
+      A.Read(i, 16, buf);
+      if(buf!=resp->slice_data(i)){
+        BOOST_LOG_TRIVIAL(warning)  << "data is not equal! ";
+        return true;
+      }
+    
+  }
+
+
   return true;
 }
 
@@ -390,7 +436,7 @@ std::vector<std::string> setupModelService() {
       return services;
   }
   while (response.keys().size() == 0) {
-      etcd::Response response = etcd.keys(prefix).get();
+      response = etcd.keys(prefix).get();
       std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
   for (size_t i = 0; i < response.keys().size(); i++) {
@@ -402,7 +448,9 @@ std::vector<std::string> setupModelService() {
 }
 int main() {
   logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
+  versions v;
   BOOST_LOG_TRIVIAL(info)  << "TestMaxQps ";
+  Command("hdfs dfs -fs hdfs://namenode:9000/ -mv /backup/"+v.old_version+" /");
   auto services = setupModelService();
   double max_qps = 0;
   //创建一个名为 cli 的智能指针对象，指向一个使用 services 参数初始化的 ModelServiceGprcClient 对象。
