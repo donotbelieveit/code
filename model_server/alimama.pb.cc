@@ -343,6 +343,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_alimama_2eproto::offsets[] PRO
   ~0u,  // no _weak_field_map_
   PROTOBUF_FIELD_OFFSET(::alimama::proto::SliceInfo, version_),
   PROTOBUF_FIELD_OFFSET(::alimama::proto::SliceInfo, slice_partition_),
+  PROTOBUF_FIELD_OFFSET(::alimama::proto::SliceInfo, slice_size_),
   PROTOBUF_FIELD_OFFSET(::alimama::proto::SliceInfo, block_info_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::alimama::proto::Slice2BlockRequest, _internal_metadata_),
@@ -416,16 +417,16 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 14, -1, sizeof(::alimama::proto::Response)},
   { 21, -1, sizeof(::alimama::proto::BlockInfo)},
   { 31, -1, sizeof(::alimama::proto::SliceInfo)},
-  { 39, -1, sizeof(::alimama::proto::Slice2BlockRequest)},
-  { 45, -1, sizeof(::alimama::proto::Slice2BlockResponse)},
-  { 51, -1, sizeof(::alimama::proto::BlockData)},
-  { 58, -1, sizeof(::alimama::proto::DataInfo)},
-  { 68, -1, sizeof(::alimama::proto::GetBlockDataRequest)},
-  { 74, -1, sizeof(::alimama::proto::GetBlockDataResponse)},
-  { 80, -1, sizeof(::alimama::proto::SendCopyRequest)},
-  { 86, -1, sizeof(::alimama::proto::SendCopyResponse)},
-  { 92, -1, sizeof(::alimama::proto::LoadAndRemoveRequest)},
-  { 98, -1, sizeof(::alimama::proto::LoadAndRemoveResponse)},
+  { 40, -1, sizeof(::alimama::proto::Slice2BlockRequest)},
+  { 46, -1, sizeof(::alimama::proto::Slice2BlockResponse)},
+  { 52, -1, sizeof(::alimama::proto::BlockData)},
+  { 59, -1, sizeof(::alimama::proto::DataInfo)},
+  { 69, -1, sizeof(::alimama::proto::GetBlockDataRequest)},
+  { 75, -1, sizeof(::alimama::proto::GetBlockDataResponse)},
+  { 81, -1, sizeof(::alimama::proto::SendCopyRequest)},
+  { 87, -1, sizeof(::alimama::proto::SendCopyResponse)},
+  { 93, -1, sizeof(::alimama::proto::LoadAndRemoveRequest)},
+  { 99, -1, sizeof(::alimama::proto::LoadAndRemoveResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -455,37 +456,38 @@ const char descriptor_table_protodef_alimama_2eproto[] PROTOBUF_SECTION_VARIABLE
   "\022\022\n\nslice_data\030\002 \003(\014\"h\n\tBlockInfo\022\027\n\017sli"
   "ce_partition\030\001 \001(\004\022\r\n\005index\030\002 \001(\004\022\020\n\010nod"
   "e_id1\030\003 \001(\r\022\020\n\010node_id2\030\004 \001(\r\022\017\n\007version"
-  "\030\005 \001(\t\"c\n\tSliceInfo\022\017\n\007version\030\001 \001(\t\022\027\n\017"
-  "slice_partition\030\002 \001(\004\022,\n\nblock_info\030\003 \003("
-  "\0132\030.alimama.proto.BlockInfo\"B\n\022Slice2Blo"
-  "ckRequest\022,\n\nslice_info\030\001 \003(\0132\030.alimama."
-  "proto.SliceInfo\"!\n\023Slice2BlockResponse\022\n"
-  "\n\002ok\030\001 \001(\010\"A\n\tBlockData\022&\n\004info\030\001 \001(\0132\030."
-  "alimama.proto.BlockInfo\022\014\n\004data\030\002 \001(\014\"_\n"
-  "\010DataInfo\022\027\n\017slice_partition\030\001 \001(\004\022\r\n\005in"
-  "dex\030\002 \001(\004\022\017\n\007version\030\003 \001(\t\022\r\n\005start\030\004 \001("
-  "\r\022\013\n\003len\030\005 \001(\r\"A\n\023GetBlockDataRequest\022*\n"
-  "\tdata_info\030\001 \001(\0132\027.alimama.proto.DataInf"
-  "o\"*\n\024GetBlockDataResponse\022\022\n\nblock_data\030"
-  "\001 \001(\014\"\?\n\017SendCopyRequest\022,\n\nblock_data\030\001"
-  " \001(\0132\030.alimama.proto.BlockData\"\036\n\020SendCo"
-  "pyResponse\022\n\n\002ok\030\001 \001(\010\"D\n\024LoadAndRemoveR"
-  "equest\022,\n\nslice_info\030\001 \003(\0132\030.alimama.pro"
-  "to.SliceInfo\"#\n\025LoadAndRemoveResponse\022\n\n"
-  "\002ok\030\001 \001(\0102H\n\014ModelService\0228\n\003Get\022\026.alima"
-  "ma.proto.Request\032\027.alimama.proto.Respons"
-  "e\"\0002\315\003\n\013NodeService\022Y\n\014GetBlockData\022\".al"
-  "imama.proto.GetBlockDataRequest\032#.alimam"
-  "a.proto.GetBlockDataResponse\"\000\022M\n\010SendCo"
-  "py\022\036.alimama.proto.SendCopyRequest\032\037.ali"
-  "mama.proto.SendCopyResponse\"\000\022]\n\016LoadAnd"
-  "Remove1\022#.alimama.proto.LoadAndRemoveReq"
-  "uest\032$.alimama.proto.LoadAndRemoveRespon"
-  "se\"\000\022]\n\016LoadAndRemove2\022#.alimama.proto.L"
-  "oadAndRemoveRequest\032$.alimama.proto.Load"
-  "AndRemoveResponse\"\000\022V\n\013Slice2Block\022!.ali"
-  "mama.proto.Slice2BlockRequest\032\".alimama."
-  "proto.Slice2BlockResponse\"\000b\006proto3"
+  "\030\005 \001(\t\"w\n\tSliceInfo\022\017\n\007version\030\001 \001(\t\022\027\n\017"
+  "slice_partition\030\002 \001(\004\022\022\n\nslice_size\030\003 \001("
+  "\004\022,\n\nblock_info\030\004 \003(\0132\030.alimama.proto.Bl"
+  "ockInfo\"B\n\022Slice2BlockRequest\022,\n\nslice_i"
+  "nfo\030\001 \003(\0132\030.alimama.proto.SliceInfo\"!\n\023S"
+  "lice2BlockResponse\022\n\n\002ok\030\001 \001(\010\"A\n\tBlockD"
+  "ata\022&\n\004info\030\001 \001(\0132\030.alimama.proto.BlockI"
+  "nfo\022\014\n\004data\030\002 \001(\014\"_\n\010DataInfo\022\027\n\017slice_p"
+  "artition\030\001 \001(\004\022\r\n\005index\030\002 \001(\004\022\017\n\007version"
+  "\030\003 \001(\t\022\r\n\005start\030\004 \001(\r\022\013\n\003len\030\005 \001(\r\"A\n\023Ge"
+  "tBlockDataRequest\022*\n\tdata_info\030\001 \001(\0132\027.a"
+  "limama.proto.DataInfo\"*\n\024GetBlockDataRes"
+  "ponse\022\022\n\nblock_data\030\001 \001(\014\"\?\n\017SendCopyReq"
+  "uest\022,\n\nblock_data\030\001 \001(\0132\030.alimama.proto"
+  ".BlockData\"\036\n\020SendCopyResponse\022\n\n\002ok\030\001 \001"
+  "(\010\"D\n\024LoadAndRemoveRequest\022,\n\nslice_info"
+  "\030\001 \003(\0132\030.alimama.proto.SliceInfo\"#\n\025Load"
+  "AndRemoveResponse\022\n\n\002ok\030\001 \001(\0102H\n\014ModelSe"
+  "rvice\0228\n\003Get\022\026.alimama.proto.Request\032\027.a"
+  "limama.proto.Response\"\0002\315\003\n\013NodeService\022"
+  "Y\n\014GetBlockData\022\".alimama.proto.GetBlock"
+  "DataRequest\032#.alimama.proto.GetBlockData"
+  "Response\"\000\022M\n\010SendCopy\022\036.alimama.proto.S"
+  "endCopyRequest\032\037.alimama.proto.SendCopyR"
+  "esponse\"\000\022]\n\016LoadAndRemove1\022#.alimama.pr"
+  "oto.LoadAndRemoveRequest\032$.alimama.proto"
+  ".LoadAndRemoveResponse\"\000\022]\n\016LoadAndRemov"
+  "e2\022#.alimama.proto.LoadAndRemoveRequest\032"
+  "$.alimama.proto.LoadAndRemoveResponse\"\000\022"
+  "V\n\013Slice2Block\022!.alimama.proto.Slice2Blo"
+  "ckRequest\032\".alimama.proto.Slice2BlockRes"
+  "ponse\"\000b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_alimama_2eproto_deps[1] = {
 };
@@ -508,7 +510,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_ali
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_alimama_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_alimama_2eproto = {
-  false, false, descriptor_table_protodef_alimama_2eproto, "alimama.proto", 1555,
+  false, false, descriptor_table_protodef_alimama_2eproto, "alimama.proto", 1575,
   &descriptor_table_alimama_2eproto_once, descriptor_table_alimama_2eproto_sccs, descriptor_table_alimama_2eproto_deps, 15, 0,
   schemas, file_default_instances, TableStruct_alimama_2eproto::offsets,
   file_level_metadata_alimama_2eproto, 15, file_level_enum_descriptors_alimama_2eproto, file_level_service_descriptors_alimama_2eproto,
@@ -1546,14 +1548,18 @@ SliceInfo::SliceInfo(const SliceInfo& from)
     version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_version(),
       GetArena());
   }
-  slice_partition_ = from.slice_partition_;
+  ::memcpy(&slice_partition_, &from.slice_partition_,
+    static_cast<size_t>(reinterpret_cast<char*>(&slice_size_) -
+    reinterpret_cast<char*>(&slice_partition_)) + sizeof(slice_size_));
   // @@protoc_insertion_point(copy_constructor:alimama.proto.SliceInfo)
 }
 
 void SliceInfo::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_SliceInfo_alimama_2eproto.base);
   version_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  slice_partition_ = PROTOBUF_ULONGLONG(0);
+  ::memset(&slice_partition_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&slice_size_) -
+      reinterpret_cast<char*>(&slice_partition_)) + sizeof(slice_size_));
 }
 
 SliceInfo::~SliceInfo() {
@@ -1590,7 +1596,9 @@ void SliceInfo::Clear() {
 
   block_info_.Clear();
   version_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  slice_partition_ = PROTOBUF_ULONGLONG(0);
+  ::memset(&slice_partition_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&slice_size_) -
+      reinterpret_cast<char*>(&slice_partition_)) + sizeof(slice_size_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1618,16 +1626,23 @@ const char* SliceInfo::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // repeated .alimama.proto.BlockInfo block_info = 3;
+      // uint64 slice_size = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+          slice_size_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // repeated .alimama.proto.BlockInfo block_info = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
             ptr = ctx->ParseMessage(_internal_add_block_info(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
         } else goto handle_unusual;
         continue;
       default: {
@@ -1674,12 +1689,18 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(2, this->_internal_slice_partition(), target);
   }
 
-  // repeated .alimama.proto.BlockInfo block_info = 3;
+  // uint64 slice_size = 3;
+  if (this->slice_size() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(3, this->_internal_slice_size(), target);
+  }
+
+  // repeated .alimama.proto.BlockInfo block_info = 4;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->_internal_block_info_size()); i < n; i++) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(3, this->_internal_block_info(i), target, stream);
+      InternalWriteMessage(4, this->_internal_block_info(i), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1698,7 +1719,7 @@ size_t SliceInfo::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .alimama.proto.BlockInfo block_info = 3;
+  // repeated .alimama.proto.BlockInfo block_info = 4;
   total_size += 1UL * this->_internal_block_info_size();
   for (const auto& msg : this->block_info_) {
     total_size +=
@@ -1717,6 +1738,13 @@ size_t SliceInfo::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
         this->_internal_slice_partition());
+  }
+
+  // uint64 slice_size = 3;
+  if (this->slice_size() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->_internal_slice_size());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1757,6 +1785,9 @@ void SliceInfo::MergeFrom(const SliceInfo& from) {
   if (from.slice_partition() != 0) {
     _internal_set_slice_partition(from._internal_slice_partition());
   }
+  if (from.slice_size() != 0) {
+    _internal_set_slice_size(from._internal_slice_size());
+  }
 }
 
 void SliceInfo::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -1782,7 +1813,12 @@ void SliceInfo::InternalSwap(SliceInfo* other) {
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   block_info_.InternalSwap(&other->block_info_);
   version_.Swap(&other->version_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  swap(slice_partition_, other->slice_partition_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(SliceInfo, slice_size_)
+      + sizeof(SliceInfo::slice_size_)
+      - PROTOBUF_FIELD_OFFSET(SliceInfo, slice_partition_)>(
+          reinterpret_cast<char*>(&slice_partition_),
+          reinterpret_cast<char*>(&other->slice_partition_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata SliceInfo::GetMetadata() const {

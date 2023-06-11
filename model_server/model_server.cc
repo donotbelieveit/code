@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <unordered_map>
 #include <future>
+#include <hdfs/hdfs.h>
 #include <random>
 #include <mutex>
 
@@ -42,6 +43,19 @@ int NODE_NUM = 6;
 std::string WORK_DIR = ".";
 int BLOCK_SIZE = 6400000;
 
+template<typename T>
+char* get_name(T path){
+    string tmp = "";
+    if(typeid(path)!=std::string){
+        tmp = std::string();
+    }else{
+        tmp = path;
+    }
+    if (found != std::string::npos) {
+        return tmp.substr(found + 1);
+    }
+    return tmp;
+}
 class Scheduler final : public alimama::proto::ModelService::Service{
     public:
         Status Get(ServerContext* context, const alimama::proto::Request* request, alimama::proto::Response* response) override {
@@ -198,30 +212,64 @@ class Scheduler final : public alimama::proto::ModelService::Service{
         }
         template<typename T>
         void load_model(std::string version_name,std::unordered_map<int, BlockInfo> &block_map,std::vector<T> request){
-            while(!fs::exists(fs::path(work_dir+"/"+version_name+"/model.done"))){
+            const char* hdfsUrl = "hdfs://namenode:9000";
+            const char* directoryPath = "/path/to/hdfs/directory";  // 要监听的 HDFS 目录路径
+
+            hdfsFS fs = hdfsConnect(hdfsUrl, 0);
+            if (fs == NULL) {
+                std::cerr << "Failed to connect to HDFS" << std::endl;
+            }
+            std::string model_dir = std::string(directoryPath) + "/" + version_name;
+            while(!hdfsExists(fs, (model_dir+"/model.done").c_str())){
+                std::cout<<"waiting for model done"<<std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(10)); 
             }
-            std::string model_meta = work_dir+"/"+version_name+"/model.meta";
-            std::ifstream file(model_meta);
-            auto model_dir = fs::path(work_dir+"/"+version_name);
-            int slice_size = -1;
-            if (file.is_open()) {
-                std::string line;
-                std::string tmp;
-                std::getline(file, tmp);
-                std::getline(file, line);
-                size_t slicePos = line.find("slice:");
-                size_t sizePos = line.find("size:");
 
-                if (slicePos != std::string::npos && sizePos != std::string::npos) {
-                    std::string slice = line.substr(slicePos + 6, sizePos - (slicePos + 6));
-                    std::string size = line.substr(sizePos + 5);
-                    slice_size = std::stoi(slice);
-                }
-            } else {
-                std::cerr << "Failed to open file: " << version_name << std::endl;
+            //读取meta文件
+            std::string model_meta = model_dir+"/model.meta";
+            
+            hdfsFile file = hdfsOpenFile(fs, model_meta.c_str(), O_RDONLY, 0, 0, 0);
+            if (!file) {
+                std::cerr << "Failed to open file: " << model_meta << std::endl;
+                hdfsDisconnect(fs);
+                return "";
             }
-            file.close();
+
+            const int bufferSize = 1024;
+            char buffer[bufferSize];
+            std::string secondLine;
+
+            // Skip the first line
+            if (hdfsRead(fs, file, buffer, bufferSize) <= 0) {
+                std::cerr << "Failed to read file: " << filePath << std::endl;
+                hdfsCloseFile(fs, file);
+                hdfsDisconnect(fs);
+                return "";
+            }
+
+            // Read the second line
+            tSize bytesRead = hdfsRead(fs, file, buffer, bufferSize);
+            if (bytesRead > 0) {
+                // Find the newline character
+                char* newlinePos = strchr(buffer, '\n');
+                if (newlinePos) {
+                    *newlinePos = '\0';  // Null-terminate the second line
+                    secondLine = buffer;
+                }
+            }
+
+            hdfsCloseFile(fs, file);
+
+            //读取第二行，获取slice_size
+            int slice_size = -1;
+            size_t slicePos = line.find("slice:");
+            size_t sizePos = line.find("size:");
+
+            if (slicePos != std::string::npos && sizePos != std::string::npos) {
+                std::string size = line.substr(sizePos + 5);
+                slice_size = std::stoi(size);
+            }
+
             std::map<int,BlockInfo> block_map_tmp;
             //random(1,node,num)
             std::random_device rd;
@@ -229,11 +277,20 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             std::uniform_int_distribution<int> dist(1, node_num);
 
             //将所有slice分成block
-            for(const auto& entry : std::filesystem::directory_iterator(model_dir)) {
-                if(entry.path().filename().string().find("model_slice") != std::string::npos){
+            hdfsFileInfo* fileInfoList = nullptr;
+            int numEntries = hdfsListDirectory(fs, directoryPath.c_str(), &fileInfoList);
+            if (numEntries < 0) {
+                std::cerr << "Failed to list directory: " << directoryPath << std::endl;
+                hdfsDisconnect(fs);
+                return;
+            }
+
+            for (int i = 0; i < numEntries; ++i) {
+                const hdfsFileInfo& fileInfo = fileInfoList[i];
+                if(std::string(fileInfo.mName()).find("model_slice") != std::string::npos){
                     continue;
                 }
-                std::string slice_name = entry.path().filename().string();
+                std::string slice_name = std::string(get_name(fileInfo.mName()));
                 std::size_t dotPosition = slice_name.find_last_of('.');
                 int slice_partition = -1;
                 if (dotPosition != std::string::npos && dotPosition < slice_name.length() - 1) {
@@ -243,6 +300,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 SliceInfo slice_info;
                 slice_info.set_slice_partition(slice_partition);
                 slice_info.set_version(version_name);
+                slice_info.set_slice_size(slice_size);
                 for(int i=0;i*block_size<=slice_size;i++){
                     BlockInfo block_info;
                     block_info.set_slice_partition(slice_partition);
@@ -259,6 +317,9 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 }
                 request[slice_partition%node_num].add_slice_info()->CopyFrom(slice_info);
             }
+            hdfsFreeFileInfo(fileInfoList, numEntries);
+
+            //将block分配给node
             if(num_version==0){
                 std::vector<std::thread> threads;
                 for(int i=0;i<node_num;i++){
@@ -278,57 +339,81 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
         }
         void model_monitor(std::string work_dir){
-            std::filesystem::path dirPath(work_dir);
-            std::filesystem::directory_entry lastEntry;
+            const char* hdfsUrl = "hdfs://namenode:9000";
+            const char* directoryPath = "/path/to/hdfs/directory";  // 要监听的 HDFS 目录路径
+
+            hdfsFS fs = hdfsConnect(hdfsUrl, 0);
+            if (fs == NULL) {
+                std::cerr << "Failed to connect to HDFS" << std::endl;
+            }
+
+            // 存储上次检查的文件列表
+            std::vector<std::string> previousFiles;
+
             while (true) {
-                std::filesystem::directory_entry newEntry;
-                // 遍历文件夹
-                for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
-                    newEntry = entry;
-                    
-                    // 检查是否是新文件
-                    if (newEntry != lastEntry) {
-                        lastEntry = newEntry;
+                int numEntries = 0;
+                hdfsFileInfo* fileInfo = hdfsListDirectory(fs, directoryPath, &numEntries);
+                if (fileInfo == NULL) {
+                    std::cerr << "Failed to list directory: " << directoryPath << std::endl;
+                    hdfsDisconnect(fs);
+                }
 
-                        // 检查文件类型
-                        if (newEntry.is_regular_file()) {
-                            if(newEntry.path().filename().string()=="rollback.version"){
+                std::vector<std::string> currentFiles;
 
-                            }else{
-                                std::cerr<<newEntry.path().filename().string()<<",wrong name"<<std::endl;
-                            }
-                            std::ifstream file(entry.path());
-                            std::string fileContent((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
-                            mtx.lock();
-                            if(num_version==1){
-                                version2 = fileContent;
-                                num_version = 2;
-                            }
-                            mtx.unlock();
-                        } else if (newEntry.is_directory()) {
-                            std::cout << "New version detected: " << newEntry.path().filename() << std::endl;
+                for (int i = 0; i < numEntries; ++i) {
+                    const char* fileName = get_name(fileInfo[i].mName);
+                    currentFiles.push_back(fileName);
+
+                    // 检查当前文件是否为新文件
+                    if (std::find(previousFiles.begin(), previousFiles.end(), fileName) == previousFiles.end()) {
+                        std::cout << "Found new file: " << fileName << std::endl;
+                        std::string version_name = "";
+                        if(fileInfo[i].mKind == kObjectKindDirectory){
+                            std::cout << "New version detected: " << fileName << std::endl;
                             // TODO: 处理新文件夹
-                            mtx.lock();
-                            if(num_version==1){
-                                version2 = entry.path().filename().string();
-                                num_version = 2;
+                            version_name = std::string(fileName);
+                        }else{
+                            std::string filePath = std::string(directoryPath) + "/" + std::string(fileName);
+                            hdfsFile file = hdfsOpenFile(fs, filePath.c_str(), O_RDONLY, 0, 0, 0);
+                            if (!file) {
+                                std::cerr << "Failed to open file: " << filePath << std::endl;
+                                hdfsDisconnect(fs);
                             }
-                            mtx.unlock();
+
+                            const int bufferSize = 1024;
+                            char buffer[bufferSize];
+                            std::string version_name;
+
+                            tSize bytesRead;
+                            while ((bytesRead = hdfsRead(fs, file, buffer, bufferSize)) > 0) {
+                                version_name.append(buffer, bytesRead);
+                            }
+
+                            hdfsCloseFile(fs, file);
                         }
                         if(num_version==0){
                             std::vector<Slice2BlockRequest> request(node_num);
-                            load_model(version1,block_map1,request);
+                            load_model(version_name,block_map1,request);
                         }else{
                             std::vector<LoadAndRemoveRequest> request(node_num);
-                            load_model(version2,block_map2,request);
+                            load_model(version_name,block_map2,request);
                         }
+                        // 在这里处理新文件的逻辑
                     }
                 }
 
-                // 等待一段时间再进行下一次检查
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+                hdfsFreeFileInfo(fileInfo, numEntries);
+
+                previousFiles = currentFiles;
+
+                std::this_thread::sleep_for(std::chrono::seconds(10));  // 休眠 1 秒后重新轮询目录
             }
+
+            hdfsDisconnect(fs);
+
+
+            //....................../
+
         
         }
 

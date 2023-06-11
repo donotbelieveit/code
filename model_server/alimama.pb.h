@@ -903,11 +903,12 @@ class SliceInfo PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kBlockInfoFieldNumber = 3,
+    kBlockInfoFieldNumber = 4,
     kVersionFieldNumber = 1,
     kSlicePartitionFieldNumber = 2,
+    kSliceSizeFieldNumber = 3,
   };
-  // repeated .alimama.proto.BlockInfo block_info = 3;
+  // repeated .alimama.proto.BlockInfo block_info = 4;
   int block_info_size() const;
   private:
   int _internal_block_info_size() const;
@@ -959,6 +960,15 @@ class SliceInfo PROTOBUF_FINAL :
   void _internal_set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value);
   public:
 
+  // uint64 slice_size = 3;
+  void clear_slice_size();
+  ::PROTOBUF_NAMESPACE_ID::uint64 slice_size() const;
+  void set_slice_size(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint64 _internal_slice_size() const;
+  void _internal_set_slice_size(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  public:
+
   // @@protoc_insertion_point(class_scope:alimama.proto.SliceInfo)
  private:
   class _Internal;
@@ -969,6 +979,7 @@ class SliceInfo PROTOBUF_FINAL :
   ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockInfo > block_info_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr version_;
   ::PROTOBUF_NAMESPACE_ID::uint64 slice_partition_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 slice_size_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_alimama_2eproto;
 };
@@ -2972,7 +2983,27 @@ inline void SliceInfo::set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value
   // @@protoc_insertion_point(field_set:alimama.proto.SliceInfo.slice_partition)
 }
 
-// repeated .alimama.proto.BlockInfo block_info = 3;
+// uint64 slice_size = 3;
+inline void SliceInfo::clear_slice_size() {
+  slice_size_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 SliceInfo::_internal_slice_size() const {
+  return slice_size_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 SliceInfo::slice_size() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.SliceInfo.slice_size)
+  return _internal_slice_size();
+}
+inline void SliceInfo::_internal_set_slice_size(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  slice_size_ = value;
+}
+inline void SliceInfo::set_slice_size(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  _internal_set_slice_size(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.SliceInfo.slice_size)
+}
+
+// repeated .alimama.proto.BlockInfo block_info = 4;
 inline int SliceInfo::_internal_block_info_size() const {
   return block_info_.size();
 }
