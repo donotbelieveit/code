@@ -12,6 +12,7 @@
 #include <thread>
 #include <filesystem>
 #include <unordered_map>
+#include <future>
 #include <random>
 #include <mutex>
 
@@ -32,40 +33,45 @@ using alimama::proto::Slice2BlockResponse;
 using alimama::proto::NodeService;
 using alimama::proto::LoadAndRemoveRequest;
 using alimama::proto::LoadAndRemoveResponse;
+using alimama::proto::GetBlockDataRequest;
+using alimama::proto::GetBlockDataResponse;
+using alimama::proto::SliceRequest;
+using alimama::proto::DataInfo;
 
 int NODE_NUM = 6;
 std::string WORK_DIR = ".";
 int BLOCK_SIZE = 6400000;
 
-
-class ModelServiceImpl final : public alimama::proto::ModelService::Service {
-  Status Get(ServerContext* context, const alimama::proto::Request* request, alimama::proto::Response* response) override {
-
-    // 设置返回结果的状态码
-    response->set_status(0);
-
-    // 添加一些 slice_data 到 response
-    // response->add_slice_data(data);
-
-    return Status::OK;
-  }
-};
-
-void RunServer() {
-  std::string server_address("0.0.0.0:50051");
-  ModelServiceImpl service;
-
-  ServerBuilder builder;
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  builder.RegisterService(&service);
-
-  std::unique_ptr<Server> server(builder.BuildAndStart());
-  std::cout << "Server listening on " << server_address << std::endl;
-
-  server->Wait();
-}
-class Scheduler{
+class Scheduler final : public alimama::proto::ModelService::Service{
     public:
+        Status Get(ServerContext* context, const alimama::proto::Request* request, alimama::proto::Response* response) override {
+
+            // 设置返回结果的状态码
+            response->set_status(0);
+
+            // 添加一些 slice_data 到 response
+            // response->add_slice_data(data);
+            std::vector<std::future<std::string>> futures;
+
+            // 遍历 slice_request 数组
+            for (const SliceRequest& slice : request->slice_request()) {
+                // 启动异步任务，并将 future 对象保存到向量中
+                uint64_t slice_partition = slice.slice_partition();
+                uint64_t data_start = slice.data_start();
+                uint64_t data_len = slice.data_len();
+                futures.push_back(std::async(std::launch::async, &Scheduler::get_block_data,this,slice_partition,data_start,data_len));
+            }
+            
+            // 等待所有异步任务完成，并按原顺序将数据写入响应
+            for (auto& future : futures) {
+                // 获取异步任务的结果
+                std::string data = future.get();
+                
+                // 将数据写入响应的 slice_data 字段
+                response->add_slice_data(std::move(data));
+            }
+            return Status::OK;
+        }
         bool slice2block(std::unique_ptr<alimama::proto::NodeService::Stub>& stub,Slice2BlockRequest& request){
             Slice2BlockResponse response;
             ClientContext context;
@@ -75,8 +81,79 @@ class Scheduler{
             }
             return false;
         }
-        std::string get_block_data(){
-            std::string data;
+        std::string send_get_block_data(int index,DataInfo info){
+            GetBlockDataRequest request;
+            request.set_allocated_data_info(&info);
+            GetBlockDataResponse response;
+            ClientContext context;
+            Status status = stubs[index]->GetBlockData(&context,request,&response);
+            if(status.ok()){
+                return response.block_data();
+            }else{
+                std::cerr<<"send_get_block_data error"<<std::endl;
+            }
+            return "";
+        }
+        std::string get_block_data(int slice_partition,int data_start,int data_len){
+            int first_index = data_start%block_size;
+            int last_index = (data_start+data_len)%block_size;
+            std::vector<std::future<std::string>> futures;
+
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<int> dist(1, 2);
+            bool flag = 0;
+            mtx.lock();
+            if(num_version==2){
+                if(switch_step==1){
+                    flag = 1;
+                }
+            }
+            mtx.unlock();
+            for (int i=first_index;i<=last_index;i++) {
+                DataInfo datainfo;
+                datainfo.set_slice_partition(slice_partition);
+                datainfo.set_index(i);
+                int index = -1;
+                if(flag){
+                    if(dist(gen)){
+                        datainfo.set_version(version1);
+                        index = block_map1[slice_partition*1000+i].node_id1();
+                    }else{
+                        datainfo.set_version(version2);
+                        index = block_map2[slice_partition*1000+i].node_id1();
+                    }
+                }
+                else{
+                    datainfo.set_version(version1);
+                    if(dist(gen)){
+                        index = block_map1[slice_partition*1000+i].node_id1();
+                    }else{
+                        index = block_map1[slice_partition*1000+i].node_id2();
+                    }
+                }
+                if(i==first_index){
+                    datainfo.set_start(data_start%block_size);
+                    datainfo.set_len(block_size-data_start%block_size);
+                }else if(i==last_index){
+                    datainfo.set_start(0);
+                    datainfo.set_len((data_start+data_len)%block_size);
+                }else{
+                    datainfo.set_start(0);
+                    datainfo.set_len(block_size);
+                }
+                futures.push_back(std::async(std::launch::async, &Scheduler::send_get_block_data,this,index,datainfo));
+            }
+            
+            // 等待所有异步任务完成，并按原顺序将数据写入响应
+            std::string data = "";
+            for (auto& future : futures) {
+                // 获取异步任务的结果
+                data += future.get();
+                
+                // 将数据写入响应的 slice_data 字段
+
+            }
             return data;
         }
         void send_load_and_remove(int index,int step,LoadAndRemoveRequest& request){
@@ -177,7 +254,7 @@ class Scheduler{
                     } while (randomNum2 == randomNum1);
                     block_info.set_node_id1(randomNum1);
                     block_info.set_node_id2(randomNum2);
-                    block_map_tmp[i] = block_info;
+                    block_map_tmp[slice_partition*1000+i] = block_info;
                     slice_info.add_block_info()->CopyFrom(block_info);
                 }
                 request[slice_partition%node_num].add_slice_info()->CopyFrom(slice_info);
@@ -185,7 +262,7 @@ class Scheduler{
             if(num_version==0){
                 std::vector<std::thread> threads;
                 for(int i=0;i<node_num;i++){
-                    threads.push_back(load_model,stubs[i],request[i]);
+                    threads.push_back(slice2block,stubs[i],request[i]);
                 }
                 for(auto&thread:threads){
                     thread.join();
@@ -278,6 +355,8 @@ class Scheduler{
                 std::cout<<version1<<" not ready yet, waiting ..."<<std::endl;
                 mtx.unlock();
             }
+            
+
 
         }
     private:
@@ -294,6 +373,11 @@ class Scheduler{
 };
 
 int main() {
-  RunServer();
-  return 0;
+    Scheduler service;
+    std::string server_address("node-1:4567");
+    ServerBuilder builder;
+    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+    builder.RegisterService(&service);
+    std::unique_ptr<Server> server(builder.BuildAndStart());
+    return 0;
 }

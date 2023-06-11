@@ -47,7 +47,7 @@ struct TableStruct_alimama_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxillaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[14]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[15]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -62,6 +62,9 @@ extern BlockDataDefaultTypeInternal _BlockData_default_instance_;
 class BlockInfo;
 class BlockInfoDefaultTypeInternal;
 extern BlockInfoDefaultTypeInternal _BlockInfo_default_instance_;
+class DataInfo;
+class DataInfoDefaultTypeInternal;
+extern DataInfoDefaultTypeInternal _DataInfo_default_instance_;
 class GetBlockDataRequest;
 class GetBlockDataRequestDefaultTypeInternal;
 extern GetBlockDataRequestDefaultTypeInternal _GetBlockDataRequest_default_instance_;
@@ -103,6 +106,7 @@ extern SliceRequestDefaultTypeInternal _SliceRequest_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::alimama::proto::BlockData* Arena::CreateMaybeMessage<::alimama::proto::BlockData>(Arena*);
 template<> ::alimama::proto::BlockInfo* Arena::CreateMaybeMessage<::alimama::proto::BlockInfo>(Arena*);
+template<> ::alimama::proto::DataInfo* Arena::CreateMaybeMessage<::alimama::proto::DataInfo>(Arena*);
 template<> ::alimama::proto::GetBlockDataRequest* Arena::CreateMaybeMessage<::alimama::proto::GetBlockDataRequest>(Arena*);
 template<> ::alimama::proto::GetBlockDataResponse* Arena::CreateMaybeMessage<::alimama::proto::GetBlockDataResponse>(Arena*);
 template<> ::alimama::proto::LoadAndRemoveRequest* Arena::CreateMaybeMessage<::alimama::proto::LoadAndRemoveRequest>(Arena*);
@@ -702,11 +706,37 @@ class BlockInfo PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
+    kVersionFieldNumber = 5,
     kSlicePartitionFieldNumber = 1,
     kIndexFieldNumber = 2,
     kNodeId1FieldNumber = 3,
     kNodeId2FieldNumber = 4,
   };
+  // string version = 5;
+  void clear_version();
+  const std::string& version() const;
+  void set_version(const std::string& value);
+  void set_version(std::string&& value);
+  void set_version(const char* value);
+  void set_version(const char* value, size_t size);
+  std::string* mutable_version();
+  std::string* release_version();
+  void set_allocated_version(std::string* version);
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  std::string* unsafe_arena_release_version();
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  void unsafe_arena_set_allocated_version(
+      std::string* version);
+  private:
+  const std::string& _internal_version() const;
+  void _internal_set_version(const std::string& value);
+  std::string* _internal_mutable_version();
+  public:
+
   // uint64 slice_partition = 1;
   void clear_slice_partition();
   ::PROTOBUF_NAMESPACE_ID::uint64 slice_partition() const;
@@ -750,6 +780,7 @@ class BlockInfo PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr version_;
   ::PROTOBUF_NAMESPACE_ID::uint64 slice_partition_;
   ::PROTOBUF_NAMESPACE_ID::uint64 index_;
   ::PROTOBUF_NAMESPACE_ID::uint32 node_id1_;
@@ -1339,64 +1370,10 @@ class BlockData PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kNode1FieldNumber = 3,
-    kNode2FieldNumber = 4,
-    kDataFieldNumber = 5,
-    kVersionFieldNumber = 6,
-    kSlicePartitionFieldNumber = 1,
-    kBlockIndexFieldNumber = 2,
+    kDataFieldNumber = 2,
+    kInfoFieldNumber = 1,
   };
-  // string node1 = 3;
-  void clear_node1();
-  const std::string& node1() const;
-  void set_node1(const std::string& value);
-  void set_node1(std::string&& value);
-  void set_node1(const char* value);
-  void set_node1(const char* value, size_t size);
-  std::string* mutable_node1();
-  std::string* release_node1();
-  void set_allocated_node1(std::string* node1);
-  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
-  "    string fields are deprecated and will be removed in a"
-  "    future release.")
-  std::string* unsafe_arena_release_node1();
-  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
-  "    string fields are deprecated and will be removed in a"
-  "    future release.")
-  void unsafe_arena_set_allocated_node1(
-      std::string* node1);
-  private:
-  const std::string& _internal_node1() const;
-  void _internal_set_node1(const std::string& value);
-  std::string* _internal_mutable_node1();
-  public:
-
-  // string node2 = 4;
-  void clear_node2();
-  const std::string& node2() const;
-  void set_node2(const std::string& value);
-  void set_node2(std::string&& value);
-  void set_node2(const char* value);
-  void set_node2(const char* value, size_t size);
-  std::string* mutable_node2();
-  std::string* release_node2();
-  void set_allocated_node2(std::string* node2);
-  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
-  "    string fields are deprecated and will be removed in a"
-  "    future release.")
-  std::string* unsafe_arena_release_node2();
-  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
-  "    string fields are deprecated and will be removed in a"
-  "    future release.")
-  void unsafe_arena_set_allocated_node2(
-      std::string* node2);
-  private:
-  const std::string& _internal_node2() const;
-  void _internal_set_node2(const std::string& value);
-  std::string* _internal_mutable_node2();
-  public:
-
-  // bytes data = 5;
+  // bytes data = 2;
   void clear_data();
   const std::string& data() const;
   void set_data(const std::string& value);
@@ -1421,7 +1398,158 @@ class BlockData PROTOBUF_FINAL :
   std::string* _internal_mutable_data();
   public:
 
-  // string version = 6;
+  // .alimama.proto.BlockInfo info = 1;
+  bool has_info() const;
+  private:
+  bool _internal_has_info() const;
+  public:
+  void clear_info();
+  const ::alimama::proto::BlockInfo& info() const;
+  ::alimama::proto::BlockInfo* release_info();
+  ::alimama::proto::BlockInfo* mutable_info();
+  void set_allocated_info(::alimama::proto::BlockInfo* info);
+  private:
+  const ::alimama::proto::BlockInfo& _internal_info() const;
+  ::alimama::proto::BlockInfo* _internal_mutable_info();
+  public:
+  void unsafe_arena_set_allocated_info(
+      ::alimama::proto::BlockInfo* info);
+  ::alimama::proto::BlockInfo* unsafe_arena_release_info();
+
+  // @@protoc_insertion_point(class_scope:alimama.proto.BlockData)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_;
+  ::alimama::proto::BlockInfo* info_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_alimama_2eproto;
+};
+// -------------------------------------------------------------------
+
+class DataInfo PROTOBUF_FINAL :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:alimama.proto.DataInfo) */ {
+ public:
+  inline DataInfo() : DataInfo(nullptr) {};
+  virtual ~DataInfo();
+
+  DataInfo(const DataInfo& from);
+  DataInfo(DataInfo&& from) noexcept
+    : DataInfo() {
+    *this = ::std::move(from);
+  }
+
+  inline DataInfo& operator=(const DataInfo& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline DataInfo& operator=(DataInfo&& from) noexcept {
+    if (GetArena() == from.GetArena()) {
+      if (this != &from) InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return GetMetadataStatic().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return GetMetadataStatic().reflection;
+  }
+  static const DataInfo& default_instance();
+
+  static void InitAsDefaultInstance();  // FOR INTERNAL USE ONLY
+  static inline const DataInfo* internal_default_instance() {
+    return reinterpret_cast<const DataInfo*>(
+               &_DataInfo_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    8;
+
+  friend void swap(DataInfo& a, DataInfo& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(DataInfo* other) {
+    if (other == this) return;
+    if (GetArena() == other->GetArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(DataInfo* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline DataInfo* New() const final {
+    return CreateMaybeMessage<DataInfo>(nullptr);
+  }
+
+  DataInfo* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<DataInfo>(arena);
+  }
+  void CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) final;
+  void CopyFrom(const DataInfo& from);
+  void MergeFrom(const DataInfo& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  inline void SharedCtor();
+  inline void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(DataInfo* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "alimama.proto.DataInfo";
+  }
+  protected:
+  explicit DataInfo(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+  private:
+  static ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadataStatic() {
+    ::PROTOBUF_NAMESPACE_ID::internal::AssignDescriptors(&::descriptor_table_alimama_2eproto);
+    return ::descriptor_table_alimama_2eproto.file_level_metadata[kIndexInFileMessages];
+  }
+
+  public:
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kVersionFieldNumber = 3,
+    kSlicePartitionFieldNumber = 1,
+    kIndexFieldNumber = 2,
+    kStartFieldNumber = 4,
+    kLenFieldNumber = 5,
+  };
+  // string version = 3;
   void clear_version();
   const std::string& version() const;
   void set_version(const std::string& value);
@@ -1455,28 +1583,45 @@ class BlockData PROTOBUF_FINAL :
   void _internal_set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value);
   public:
 
-  // uint64 block_index = 2;
-  void clear_block_index();
-  ::PROTOBUF_NAMESPACE_ID::uint64 block_index() const;
-  void set_block_index(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  // uint64 index = 2;
+  void clear_index();
+  ::PROTOBUF_NAMESPACE_ID::uint64 index() const;
+  void set_index(::PROTOBUF_NAMESPACE_ID::uint64 value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::uint64 _internal_block_index() const;
-  void _internal_set_block_index(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  ::PROTOBUF_NAMESPACE_ID::uint64 _internal_index() const;
+  void _internal_set_index(::PROTOBUF_NAMESPACE_ID::uint64 value);
   public:
 
-  // @@protoc_insertion_point(class_scope:alimama.proto.BlockData)
+  // uint32 start = 4;
+  void clear_start();
+  ::PROTOBUF_NAMESPACE_ID::uint32 start() const;
+  void set_start(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_start() const;
+  void _internal_set_start(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
+  // uint32 len = 5;
+  void clear_len();
+  ::PROTOBUF_NAMESPACE_ID::uint32 len() const;
+  void set_len(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_len() const;
+  void _internal_set_len(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:alimama.proto.DataInfo)
  private:
   class _Internal;
 
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr node1_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr node2_;
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr data_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr version_;
   ::PROTOBUF_NAMESPACE_ID::uint64 slice_partition_;
-  ::PROTOBUF_NAMESPACE_ID::uint64 block_index_;
+  ::PROTOBUF_NAMESPACE_ID::uint64 index_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 start_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 len_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_alimama_2eproto;
 };
@@ -1524,7 +1669,7 @@ class GetBlockDataRequest PROTOBUF_FINAL :
                &_GetBlockDataRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    9;
 
   friend void swap(GetBlockDataRequest& a, GetBlockDataRequest& b) {
     a.Swap(&b);
@@ -1595,25 +1740,25 @@ class GetBlockDataRequest PROTOBUF_FINAL :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kBlockInfoFieldNumber = 1,
+    kDataInfoFieldNumber = 1,
   };
-  // repeated .alimama.proto.BlockInfo block_info = 1;
-  int block_info_size() const;
+  // .alimama.proto.DataInfo data_info = 1;
+  bool has_data_info() const;
   private:
-  int _internal_block_info_size() const;
+  bool _internal_has_data_info() const;
   public:
-  void clear_block_info();
-  ::alimama::proto::BlockInfo* mutable_block_info(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockInfo >*
-      mutable_block_info();
+  void clear_data_info();
+  const ::alimama::proto::DataInfo& data_info() const;
+  ::alimama::proto::DataInfo* release_data_info();
+  ::alimama::proto::DataInfo* mutable_data_info();
+  void set_allocated_data_info(::alimama::proto::DataInfo* data_info);
   private:
-  const ::alimama::proto::BlockInfo& _internal_block_info(int index) const;
-  ::alimama::proto::BlockInfo* _internal_add_block_info();
+  const ::alimama::proto::DataInfo& _internal_data_info() const;
+  ::alimama::proto::DataInfo* _internal_mutable_data_info();
   public:
-  const ::alimama::proto::BlockInfo& block_info(int index) const;
-  ::alimama::proto::BlockInfo* add_block_info();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockInfo >&
-      block_info() const;
+  void unsafe_arena_set_allocated_data_info(
+      ::alimama::proto::DataInfo* data_info);
+  ::alimama::proto::DataInfo* unsafe_arena_release_data_info();
 
   // @@protoc_insertion_point(class_scope:alimama.proto.GetBlockDataRequest)
  private:
@@ -1622,7 +1767,7 @@ class GetBlockDataRequest PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockInfo > block_info_;
+  ::alimama::proto::DataInfo* data_info_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_alimama_2eproto;
 };
@@ -1670,7 +1815,7 @@ class GetBlockDataResponse PROTOBUF_FINAL :
                &_GetBlockDataResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    9;
+    10;
 
   friend void swap(GetBlockDataResponse& a, GetBlockDataResponse& b) {
     a.Swap(&b);
@@ -1743,23 +1888,30 @@ class GetBlockDataResponse PROTOBUF_FINAL :
   enum : int {
     kBlockDataFieldNumber = 1,
   };
-  // repeated .alimama.proto.BlockData block_data = 1;
-  int block_data_size() const;
-  private:
-  int _internal_block_data_size() const;
-  public:
+  // bytes block_data = 1;
   void clear_block_data();
-  ::alimama::proto::BlockData* mutable_block_data(int index);
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockData >*
-      mutable_block_data();
+  const std::string& block_data() const;
+  void set_block_data(const std::string& value);
+  void set_block_data(std::string&& value);
+  void set_block_data(const char* value);
+  void set_block_data(const void* value, size_t size);
+  std::string* mutable_block_data();
+  std::string* release_block_data();
+  void set_allocated_block_data(std::string* block_data);
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  std::string* unsafe_arena_release_block_data();
+  GOOGLE_PROTOBUF_RUNTIME_DEPRECATED("The unsafe_arena_ accessors for"
+  "    string fields are deprecated and will be removed in a"
+  "    future release.")
+  void unsafe_arena_set_allocated_block_data(
+      std::string* block_data);
   private:
-  const ::alimama::proto::BlockData& _internal_block_data(int index) const;
-  ::alimama::proto::BlockData* _internal_add_block_data();
+  const std::string& _internal_block_data() const;
+  void _internal_set_block_data(const std::string& value);
+  std::string* _internal_mutable_block_data();
   public:
-  const ::alimama::proto::BlockData& block_data(int index) const;
-  ::alimama::proto::BlockData* add_block_data();
-  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockData >&
-      block_data() const;
 
   // @@protoc_insertion_point(class_scope:alimama.proto.GetBlockDataResponse)
  private:
@@ -1768,7 +1920,7 @@ class GetBlockDataResponse PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockData > block_data_;
+  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr block_data_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_alimama_2eproto;
 };
@@ -1816,7 +1968,7 @@ class SendCopyRequest PROTOBUF_FINAL :
                &_SendCopyRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    10;
+    11;
 
   friend void swap(SendCopyRequest& a, SendCopyRequest& b) {
     a.Swap(&b);
@@ -1962,7 +2114,7 @@ class SendCopyResponse PROTOBUF_FINAL :
                &_SendCopyResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    12;
 
   friend void swap(SendCopyResponse& a, SendCopyResponse& b) {
     a.Swap(&b);
@@ -2099,7 +2251,7 @@ class LoadAndRemoveRequest PROTOBUF_FINAL :
                &_LoadAndRemoveRequest_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    13;
 
   friend void swap(LoadAndRemoveRequest& a, LoadAndRemoveRequest& b) {
     a.Swap(&b);
@@ -2245,7 +2397,7 @@ class LoadAndRemoveResponse PROTOBUF_FINAL :
                &_LoadAndRemoveResponse_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    13;
+    14;
 
   friend void swap(LoadAndRemoveResponse& a, LoadAndRemoveResponse& b) {
     a.Swap(&b);
@@ -2634,6 +2786,87 @@ inline void BlockInfo::set_node_id2(::PROTOBUF_NAMESPACE_ID::uint32 value) {
   // @@protoc_insertion_point(field_set:alimama.proto.BlockInfo.node_id2)
 }
 
+// string version = 5;
+inline void BlockInfo::clear_version() {
+  version_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline const std::string& BlockInfo::version() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.BlockInfo.version)
+  return _internal_version();
+}
+inline void BlockInfo::set_version(const std::string& value) {
+  _internal_set_version(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.BlockInfo.version)
+}
+inline std::string* BlockInfo::mutable_version() {
+  // @@protoc_insertion_point(field_mutable:alimama.proto.BlockInfo.version)
+  return _internal_mutable_version();
+}
+inline const std::string& BlockInfo::_internal_version() const {
+  return version_.Get();
+}
+inline void BlockInfo::_internal_set_version(const std::string& value) {
+  
+  version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
+}
+inline void BlockInfo::set_version(std::string&& value) {
+  
+  version_.Set(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
+  // @@protoc_insertion_point(field_set_rvalue:alimama.proto.BlockInfo.version)
+}
+inline void BlockInfo::set_version(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
+              GetArena());
+  // @@protoc_insertion_point(field_set_char:alimama.proto.BlockInfo.version)
+}
+inline void BlockInfo::set_version(const char* value,
+    size_t size) {
+  
+  version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
+      reinterpret_cast<const char*>(value), size), GetArena());
+  // @@protoc_insertion_point(field_set_pointer:alimama.proto.BlockInfo.version)
+}
+inline std::string* BlockInfo::_internal_mutable_version() {
+  
+  return version_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline std::string* BlockInfo::release_version() {
+  // @@protoc_insertion_point(field_release:alimama.proto.BlockInfo.version)
+  return version_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline void BlockInfo::set_allocated_version(std::string* version) {
+  if (version != nullptr) {
+    
+  } else {
+    
+  }
+  version_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), version,
+      GetArena());
+  // @@protoc_insertion_point(field_set_allocated:alimama.proto.BlockInfo.version)
+}
+inline std::string* BlockInfo::unsafe_arena_release_version() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:alimama.proto.BlockInfo.version)
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  
+  return version_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      GetArena());
+}
+inline void BlockInfo::unsafe_arena_set_allocated_version(
+    std::string* version) {
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  if (version != nullptr) {
+    
+  } else {
+    
+  }
+  version_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      version, GetArena());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.BlockInfo.version)
+}
+
 // -------------------------------------------------------------------
 
 // SliceInfo
@@ -2849,209 +3082,88 @@ inline void Slice2BlockResponse::set_ok(bool value) {
 
 // BlockData
 
-// uint64 slice_partition = 1;
-inline void BlockData::clear_slice_partition() {
-  slice_partition_ = PROTOBUF_ULONGLONG(0);
+// .alimama.proto.BlockInfo info = 1;
+inline bool BlockData::_internal_has_info() const {
+  return this != internal_default_instance() && info_ != nullptr;
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint64 BlockData::_internal_slice_partition() const {
-  return slice_partition_;
+inline bool BlockData::has_info() const {
+  return _internal_has_info();
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint64 BlockData::slice_partition() const {
-  // @@protoc_insertion_point(field_get:alimama.proto.BlockData.slice_partition)
-  return _internal_slice_partition();
+inline void BlockData::clear_info() {
+  if (GetArena() == nullptr && info_ != nullptr) {
+    delete info_;
+  }
+  info_ = nullptr;
 }
-inline void BlockData::_internal_set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value) {
-  
-  slice_partition_ = value;
+inline const ::alimama::proto::BlockInfo& BlockData::_internal_info() const {
+  const ::alimama::proto::BlockInfo* p = info_;
+  return p != nullptr ? *p : *reinterpret_cast<const ::alimama::proto::BlockInfo*>(
+      &::alimama::proto::_BlockInfo_default_instance_);
 }
-inline void BlockData::set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value) {
-  _internal_set_slice_partition(value);
-  // @@protoc_insertion_point(field_set:alimama.proto.BlockData.slice_partition)
+inline const ::alimama::proto::BlockInfo& BlockData::info() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.BlockData.info)
+  return _internal_info();
 }
-
-// uint64 block_index = 2;
-inline void BlockData::clear_block_index() {
-  block_index_ = PROTOBUF_ULONGLONG(0);
-}
-inline ::PROTOBUF_NAMESPACE_ID::uint64 BlockData::_internal_block_index() const {
-  return block_index_;
-}
-inline ::PROTOBUF_NAMESPACE_ID::uint64 BlockData::block_index() const {
-  // @@protoc_insertion_point(field_get:alimama.proto.BlockData.block_index)
-  return _internal_block_index();
-}
-inline void BlockData::_internal_set_block_index(::PROTOBUF_NAMESPACE_ID::uint64 value) {
-  
-  block_index_ = value;
-}
-inline void BlockData::set_block_index(::PROTOBUF_NAMESPACE_ID::uint64 value) {
-  _internal_set_block_index(value);
-  // @@protoc_insertion_point(field_set:alimama.proto.BlockData.block_index)
-}
-
-// string node1 = 3;
-inline void BlockData::clear_node1() {
-  node1_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-}
-inline const std::string& BlockData::node1() const {
-  // @@protoc_insertion_point(field_get:alimama.proto.BlockData.node1)
-  return _internal_node1();
-}
-inline void BlockData::set_node1(const std::string& value) {
-  _internal_set_node1(value);
-  // @@protoc_insertion_point(field_set:alimama.proto.BlockData.node1)
-}
-inline std::string* BlockData::mutable_node1() {
-  // @@protoc_insertion_point(field_mutable:alimama.proto.BlockData.node1)
-  return _internal_mutable_node1();
-}
-inline const std::string& BlockData::_internal_node1() const {
-  return node1_.Get();
-}
-inline void BlockData::_internal_set_node1(const std::string& value) {
-  
-  node1_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
-}
-inline void BlockData::set_node1(std::string&& value) {
-  
-  node1_.Set(
-    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
-  // @@protoc_insertion_point(field_set_rvalue:alimama.proto.BlockData.node1)
-}
-inline void BlockData::set_node1(const char* value) {
-  GOOGLE_DCHECK(value != nullptr);
-  
-  node1_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
-              GetArena());
-  // @@protoc_insertion_point(field_set_char:alimama.proto.BlockData.node1)
-}
-inline void BlockData::set_node1(const char* value,
-    size_t size) {
-  
-  node1_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
-      reinterpret_cast<const char*>(value), size), GetArena());
-  // @@protoc_insertion_point(field_set_pointer:alimama.proto.BlockData.node1)
-}
-inline std::string* BlockData::_internal_mutable_node1() {
-  
-  return node1_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-}
-inline std::string* BlockData::release_node1() {
-  // @@protoc_insertion_point(field_release:alimama.proto.BlockData.node1)
-  return node1_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-}
-inline void BlockData::set_allocated_node1(std::string* node1) {
-  if (node1 != nullptr) {
+inline void BlockData::unsafe_arena_set_allocated_info(
+    ::alimama::proto::BlockInfo* info) {
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(info_);
+  }
+  info_ = info;
+  if (info) {
     
   } else {
     
   }
-  node1_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), node1,
-      GetArena());
-  // @@protoc_insertion_point(field_set_allocated:alimama.proto.BlockData.node1)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.BlockData.info)
 }
-inline std::string* BlockData::unsafe_arena_release_node1() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:alimama.proto.BlockData.node1)
-  GOOGLE_DCHECK(GetArena() != nullptr);
+inline ::alimama::proto::BlockInfo* BlockData::release_info() {
+  auto temp = unsafe_arena_release_info();
+  if (GetArena() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+  return temp;
+}
+inline ::alimama::proto::BlockInfo* BlockData::unsafe_arena_release_info() {
+  // @@protoc_insertion_point(field_release:alimama.proto.BlockData.info)
   
-  return node1_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
-      GetArena());
+  ::alimama::proto::BlockInfo* temp = info_;
+  info_ = nullptr;
+  return temp;
 }
-inline void BlockData::unsafe_arena_set_allocated_node1(
-    std::string* node1) {
-  GOOGLE_DCHECK(GetArena() != nullptr);
-  if (node1 != nullptr) {
+inline ::alimama::proto::BlockInfo* BlockData::_internal_mutable_info() {
+  
+  if (info_ == nullptr) {
+    auto* p = CreateMaybeMessage<::alimama::proto::BlockInfo>(GetArena());
+    info_ = p;
+  }
+  return info_;
+}
+inline ::alimama::proto::BlockInfo* BlockData::mutable_info() {
+  // @@protoc_insertion_point(field_mutable:alimama.proto.BlockData.info)
+  return _internal_mutable_info();
+}
+inline void BlockData::set_allocated_info(::alimama::proto::BlockInfo* info) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArena();
+  if (message_arena == nullptr) {
+    delete info_;
+  }
+  if (info) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::GetArena(info);
+    if (message_arena != submessage_arena) {
+      info = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, info, submessage_arena);
+    }
     
   } else {
     
   }
-  node1_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
-      node1, GetArena());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.BlockData.node1)
+  info_ = info;
+  // @@protoc_insertion_point(field_set_allocated:alimama.proto.BlockData.info)
 }
 
-// string node2 = 4;
-inline void BlockData::clear_node2() {
-  node2_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-}
-inline const std::string& BlockData::node2() const {
-  // @@protoc_insertion_point(field_get:alimama.proto.BlockData.node2)
-  return _internal_node2();
-}
-inline void BlockData::set_node2(const std::string& value) {
-  _internal_set_node2(value);
-  // @@protoc_insertion_point(field_set:alimama.proto.BlockData.node2)
-}
-inline std::string* BlockData::mutable_node2() {
-  // @@protoc_insertion_point(field_mutable:alimama.proto.BlockData.node2)
-  return _internal_mutable_node2();
-}
-inline const std::string& BlockData::_internal_node2() const {
-  return node2_.Get();
-}
-inline void BlockData::_internal_set_node2(const std::string& value) {
-  
-  node2_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
-}
-inline void BlockData::set_node2(std::string&& value) {
-  
-  node2_.Set(
-    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
-  // @@protoc_insertion_point(field_set_rvalue:alimama.proto.BlockData.node2)
-}
-inline void BlockData::set_node2(const char* value) {
-  GOOGLE_DCHECK(value != nullptr);
-  
-  node2_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
-              GetArena());
-  // @@protoc_insertion_point(field_set_char:alimama.proto.BlockData.node2)
-}
-inline void BlockData::set_node2(const char* value,
-    size_t size) {
-  
-  node2_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
-      reinterpret_cast<const char*>(value), size), GetArena());
-  // @@protoc_insertion_point(field_set_pointer:alimama.proto.BlockData.node2)
-}
-inline std::string* BlockData::_internal_mutable_node2() {
-  
-  return node2_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-}
-inline std::string* BlockData::release_node2() {
-  // @@protoc_insertion_point(field_release:alimama.proto.BlockData.node2)
-  return node2_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-}
-inline void BlockData::set_allocated_node2(std::string* node2) {
-  if (node2 != nullptr) {
-    
-  } else {
-    
-  }
-  node2_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), node2,
-      GetArena());
-  // @@protoc_insertion_point(field_set_allocated:alimama.proto.BlockData.node2)
-}
-inline std::string* BlockData::unsafe_arena_release_node2() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:alimama.proto.BlockData.node2)
-  GOOGLE_DCHECK(GetArena() != nullptr);
-  
-  return node2_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
-      GetArena());
-}
-inline void BlockData::unsafe_arena_set_allocated_node2(
-    std::string* node2) {
-  GOOGLE_DCHECK(GetArena() != nullptr);
-  if (node2 != nullptr) {
-    
-  } else {
-    
-  }
-  node2_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
-      node2, GetArena());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.BlockData.node2)
-}
-
-// bytes data = 5;
+// bytes data = 2;
 inline void BlockData::clear_data() {
   data_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
@@ -3132,58 +3244,102 @@ inline void BlockData::unsafe_arena_set_allocated_data(
   // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.BlockData.data)
 }
 
-// string version = 6;
-inline void BlockData::clear_version() {
+// -------------------------------------------------------------------
+
+// DataInfo
+
+// uint64 slice_partition = 1;
+inline void DataInfo::clear_slice_partition() {
+  slice_partition_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 DataInfo::_internal_slice_partition() const {
+  return slice_partition_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 DataInfo::slice_partition() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.DataInfo.slice_partition)
+  return _internal_slice_partition();
+}
+inline void DataInfo::_internal_set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  slice_partition_ = value;
+}
+inline void DataInfo::set_slice_partition(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  _internal_set_slice_partition(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.DataInfo.slice_partition)
+}
+
+// uint64 index = 2;
+inline void DataInfo::clear_index() {
+  index_ = PROTOBUF_ULONGLONG(0);
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 DataInfo::_internal_index() const {
+  return index_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint64 DataInfo::index() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.DataInfo.index)
+  return _internal_index();
+}
+inline void DataInfo::_internal_set_index(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  
+  index_ = value;
+}
+inline void DataInfo::set_index(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+  _internal_set_index(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.DataInfo.index)
+}
+
+// string version = 3;
+inline void DataInfo::clear_version() {
   version_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline const std::string& BlockData::version() const {
-  // @@protoc_insertion_point(field_get:alimama.proto.BlockData.version)
+inline const std::string& DataInfo::version() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.DataInfo.version)
   return _internal_version();
 }
-inline void BlockData::set_version(const std::string& value) {
+inline void DataInfo::set_version(const std::string& value) {
   _internal_set_version(value);
-  // @@protoc_insertion_point(field_set:alimama.proto.BlockData.version)
+  // @@protoc_insertion_point(field_set:alimama.proto.DataInfo.version)
 }
-inline std::string* BlockData::mutable_version() {
-  // @@protoc_insertion_point(field_mutable:alimama.proto.BlockData.version)
+inline std::string* DataInfo::mutable_version() {
+  // @@protoc_insertion_point(field_mutable:alimama.proto.DataInfo.version)
   return _internal_mutable_version();
 }
-inline const std::string& BlockData::_internal_version() const {
+inline const std::string& DataInfo::_internal_version() const {
   return version_.Get();
 }
-inline void BlockData::_internal_set_version(const std::string& value) {
+inline void DataInfo::_internal_set_version(const std::string& value) {
   
   version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
 }
-inline void BlockData::set_version(std::string&& value) {
+inline void DataInfo::set_version(std::string&& value) {
   
   version_.Set(
     &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
-  // @@protoc_insertion_point(field_set_rvalue:alimama.proto.BlockData.version)
+  // @@protoc_insertion_point(field_set_rvalue:alimama.proto.DataInfo.version)
 }
-inline void BlockData::set_version(const char* value) {
+inline void DataInfo::set_version(const char* value) {
   GOOGLE_DCHECK(value != nullptr);
   
   version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
               GetArena());
-  // @@protoc_insertion_point(field_set_char:alimama.proto.BlockData.version)
+  // @@protoc_insertion_point(field_set_char:alimama.proto.DataInfo.version)
 }
-inline void BlockData::set_version(const char* value,
+inline void DataInfo::set_version(const char* value,
     size_t size) {
   
   version_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
       reinterpret_cast<const char*>(value), size), GetArena());
-  // @@protoc_insertion_point(field_set_pointer:alimama.proto.BlockData.version)
+  // @@protoc_insertion_point(field_set_pointer:alimama.proto.DataInfo.version)
 }
-inline std::string* BlockData::_internal_mutable_version() {
+inline std::string* DataInfo::_internal_mutable_version() {
   
   return version_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline std::string* BlockData::release_version() {
-  // @@protoc_insertion_point(field_release:alimama.proto.BlockData.version)
+inline std::string* DataInfo::release_version() {
+  // @@protoc_insertion_point(field_release:alimama.proto.DataInfo.version)
   return version_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline void BlockData::set_allocated_version(std::string* version) {
+inline void DataInfo::set_allocated_version(std::string* version) {
   if (version != nullptr) {
     
   } else {
@@ -3191,16 +3347,16 @@ inline void BlockData::set_allocated_version(std::string* version) {
   }
   version_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), version,
       GetArena());
-  // @@protoc_insertion_point(field_set_allocated:alimama.proto.BlockData.version)
+  // @@protoc_insertion_point(field_set_allocated:alimama.proto.DataInfo.version)
 }
-inline std::string* BlockData::unsafe_arena_release_version() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:alimama.proto.BlockData.version)
+inline std::string* DataInfo::unsafe_arena_release_version() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:alimama.proto.DataInfo.version)
   GOOGLE_DCHECK(GetArena() != nullptr);
   
   return version_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       GetArena());
 }
-inline void BlockData::unsafe_arena_set_allocated_version(
+inline void DataInfo::unsafe_arena_set_allocated_version(
     std::string* version) {
   GOOGLE_DCHECK(GetArena() != nullptr);
   if (version != nullptr) {
@@ -3210,93 +3366,217 @@ inline void BlockData::unsafe_arena_set_allocated_version(
   }
   version_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       version, GetArena());
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.BlockData.version)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.DataInfo.version)
+}
+
+// uint32 start = 4;
+inline void DataInfo::clear_start() {
+  start_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 DataInfo::_internal_start() const {
+  return start_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 DataInfo::start() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.DataInfo.start)
+  return _internal_start();
+}
+inline void DataInfo::_internal_set_start(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  start_ = value;
+}
+inline void DataInfo::set_start(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_start(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.DataInfo.start)
+}
+
+// uint32 len = 5;
+inline void DataInfo::clear_len() {
+  len_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 DataInfo::_internal_len() const {
+  return len_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 DataInfo::len() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.DataInfo.len)
+  return _internal_len();
+}
+inline void DataInfo::_internal_set_len(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  len_ = value;
+}
+inline void DataInfo::set_len(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_len(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.DataInfo.len)
 }
 
 // -------------------------------------------------------------------
 
 // GetBlockDataRequest
 
-// repeated .alimama.proto.BlockInfo block_info = 1;
-inline int GetBlockDataRequest::_internal_block_info_size() const {
-  return block_info_.size();
+// .alimama.proto.DataInfo data_info = 1;
+inline bool GetBlockDataRequest::_internal_has_data_info() const {
+  return this != internal_default_instance() && data_info_ != nullptr;
 }
-inline int GetBlockDataRequest::block_info_size() const {
-  return _internal_block_info_size();
+inline bool GetBlockDataRequest::has_data_info() const {
+  return _internal_has_data_info();
 }
-inline void GetBlockDataRequest::clear_block_info() {
-  block_info_.Clear();
+inline void GetBlockDataRequest::clear_data_info() {
+  if (GetArena() == nullptr && data_info_ != nullptr) {
+    delete data_info_;
+  }
+  data_info_ = nullptr;
 }
-inline ::alimama::proto::BlockInfo* GetBlockDataRequest::mutable_block_info(int index) {
-  // @@protoc_insertion_point(field_mutable:alimama.proto.GetBlockDataRequest.block_info)
-  return block_info_.Mutable(index);
+inline const ::alimama::proto::DataInfo& GetBlockDataRequest::_internal_data_info() const {
+  const ::alimama::proto::DataInfo* p = data_info_;
+  return p != nullptr ? *p : *reinterpret_cast<const ::alimama::proto::DataInfo*>(
+      &::alimama::proto::_DataInfo_default_instance_);
 }
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockInfo >*
-GetBlockDataRequest::mutable_block_info() {
-  // @@protoc_insertion_point(field_mutable_list:alimama.proto.GetBlockDataRequest.block_info)
-  return &block_info_;
+inline const ::alimama::proto::DataInfo& GetBlockDataRequest::data_info() const {
+  // @@protoc_insertion_point(field_get:alimama.proto.GetBlockDataRequest.data_info)
+  return _internal_data_info();
 }
-inline const ::alimama::proto::BlockInfo& GetBlockDataRequest::_internal_block_info(int index) const {
-  return block_info_.Get(index);
+inline void GetBlockDataRequest::unsafe_arena_set_allocated_data_info(
+    ::alimama::proto::DataInfo* data_info) {
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(data_info_);
+  }
+  data_info_ = data_info;
+  if (data_info) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.GetBlockDataRequest.data_info)
 }
-inline const ::alimama::proto::BlockInfo& GetBlockDataRequest::block_info(int index) const {
-  // @@protoc_insertion_point(field_get:alimama.proto.GetBlockDataRequest.block_info)
-  return _internal_block_info(index);
+inline ::alimama::proto::DataInfo* GetBlockDataRequest::release_data_info() {
+  auto temp = unsafe_arena_release_data_info();
+  if (GetArena() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+  return temp;
 }
-inline ::alimama::proto::BlockInfo* GetBlockDataRequest::_internal_add_block_info() {
-  return block_info_.Add();
+inline ::alimama::proto::DataInfo* GetBlockDataRequest::unsafe_arena_release_data_info() {
+  // @@protoc_insertion_point(field_release:alimama.proto.GetBlockDataRequest.data_info)
+  
+  ::alimama::proto::DataInfo* temp = data_info_;
+  data_info_ = nullptr;
+  return temp;
 }
-inline ::alimama::proto::BlockInfo* GetBlockDataRequest::add_block_info() {
-  // @@protoc_insertion_point(field_add:alimama.proto.GetBlockDataRequest.block_info)
-  return _internal_add_block_info();
+inline ::alimama::proto::DataInfo* GetBlockDataRequest::_internal_mutable_data_info() {
+  
+  if (data_info_ == nullptr) {
+    auto* p = CreateMaybeMessage<::alimama::proto::DataInfo>(GetArena());
+    data_info_ = p;
+  }
+  return data_info_;
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockInfo >&
-GetBlockDataRequest::block_info() const {
-  // @@protoc_insertion_point(field_list:alimama.proto.GetBlockDataRequest.block_info)
-  return block_info_;
+inline ::alimama::proto::DataInfo* GetBlockDataRequest::mutable_data_info() {
+  // @@protoc_insertion_point(field_mutable:alimama.proto.GetBlockDataRequest.data_info)
+  return _internal_mutable_data_info();
+}
+inline void GetBlockDataRequest::set_allocated_data_info(::alimama::proto::DataInfo* data_info) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArena();
+  if (message_arena == nullptr) {
+    delete data_info_;
+  }
+  if (data_info) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+      ::PROTOBUF_NAMESPACE_ID::Arena::GetArena(data_info);
+    if (message_arena != submessage_arena) {
+      data_info = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, data_info, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  data_info_ = data_info;
+  // @@protoc_insertion_point(field_set_allocated:alimama.proto.GetBlockDataRequest.data_info)
 }
 
 // -------------------------------------------------------------------
 
 // GetBlockDataResponse
 
-// repeated .alimama.proto.BlockData block_data = 1;
-inline int GetBlockDataResponse::_internal_block_data_size() const {
-  return block_data_.size();
-}
-inline int GetBlockDataResponse::block_data_size() const {
-  return _internal_block_data_size();
-}
+// bytes block_data = 1;
 inline void GetBlockDataResponse::clear_block_data() {
-  block_data_.Clear();
+  block_data_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
 }
-inline ::alimama::proto::BlockData* GetBlockDataResponse::mutable_block_data(int index) {
-  // @@protoc_insertion_point(field_mutable:alimama.proto.GetBlockDataResponse.block_data)
-  return block_data_.Mutable(index);
-}
-inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockData >*
-GetBlockDataResponse::mutable_block_data() {
-  // @@protoc_insertion_point(field_mutable_list:alimama.proto.GetBlockDataResponse.block_data)
-  return &block_data_;
-}
-inline const ::alimama::proto::BlockData& GetBlockDataResponse::_internal_block_data(int index) const {
-  return block_data_.Get(index);
-}
-inline const ::alimama::proto::BlockData& GetBlockDataResponse::block_data(int index) const {
+inline const std::string& GetBlockDataResponse::block_data() const {
   // @@protoc_insertion_point(field_get:alimama.proto.GetBlockDataResponse.block_data)
-  return _internal_block_data(index);
+  return _internal_block_data();
 }
-inline ::alimama::proto::BlockData* GetBlockDataResponse::_internal_add_block_data() {
-  return block_data_.Add();
+inline void GetBlockDataResponse::set_block_data(const std::string& value) {
+  _internal_set_block_data(value);
+  // @@protoc_insertion_point(field_set:alimama.proto.GetBlockDataResponse.block_data)
 }
-inline ::alimama::proto::BlockData* GetBlockDataResponse::add_block_data() {
-  // @@protoc_insertion_point(field_add:alimama.proto.GetBlockDataResponse.block_data)
-  return _internal_add_block_data();
+inline std::string* GetBlockDataResponse::mutable_block_data() {
+  // @@protoc_insertion_point(field_mutable:alimama.proto.GetBlockDataResponse.block_data)
+  return _internal_mutable_block_data();
 }
-inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::alimama::proto::BlockData >&
-GetBlockDataResponse::block_data() const {
-  // @@protoc_insertion_point(field_list:alimama.proto.GetBlockDataResponse.block_data)
-  return block_data_;
+inline const std::string& GetBlockDataResponse::_internal_block_data() const {
+  return block_data_.Get();
+}
+inline void GetBlockDataResponse::_internal_set_block_data(const std::string& value) {
+  
+  block_data_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), value, GetArena());
+}
+inline void GetBlockDataResponse::set_block_data(std::string&& value) {
+  
+  block_data_.Set(
+    &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::move(value), GetArena());
+  // @@protoc_insertion_point(field_set_rvalue:alimama.proto.GetBlockDataResponse.block_data)
+}
+inline void GetBlockDataResponse::set_block_data(const char* value) {
+  GOOGLE_DCHECK(value != nullptr);
+  
+  block_data_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(value),
+              GetArena());
+  // @@protoc_insertion_point(field_set_char:alimama.proto.GetBlockDataResponse.block_data)
+}
+inline void GetBlockDataResponse::set_block_data(const void* value,
+    size_t size) {
+  
+  block_data_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), ::std::string(
+      reinterpret_cast<const char*>(value), size), GetArena());
+  // @@protoc_insertion_point(field_set_pointer:alimama.proto.GetBlockDataResponse.block_data)
+}
+inline std::string* GetBlockDataResponse::_internal_mutable_block_data() {
+  
+  return block_data_.Mutable(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline std::string* GetBlockDataResponse::release_block_data() {
+  // @@protoc_insertion_point(field_release:alimama.proto.GetBlockDataResponse.block_data)
+  return block_data_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+}
+inline void GetBlockDataResponse::set_allocated_block_data(std::string* block_data) {
+  if (block_data != nullptr) {
+    
+  } else {
+    
+  }
+  block_data_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), block_data,
+      GetArena());
+  // @@protoc_insertion_point(field_set_allocated:alimama.proto.GetBlockDataResponse.block_data)
+}
+inline std::string* GetBlockDataResponse::unsafe_arena_release_block_data() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:alimama.proto.GetBlockDataResponse.block_data)
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  
+  return block_data_.UnsafeArenaRelease(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      GetArena());
+}
+inline void GetBlockDataResponse::unsafe_arena_set_allocated_block_data(
+    std::string* block_data) {
+  GOOGLE_DCHECK(GetArena() != nullptr);
+  if (block_data != nullptr) {
+    
+  } else {
+    
+  }
+  block_data_.UnsafeArenaSetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
+      block_data, GetArena());
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:alimama.proto.GetBlockDataResponse.block_data)
 }
 
 // -------------------------------------------------------------------
@@ -3478,6 +3758,8 @@ inline void LoadAndRemoveResponse::set_ok(bool value) {
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
