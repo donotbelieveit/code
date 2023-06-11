@@ -27,6 +27,7 @@ using grpc::ServerContext;
 
 using alimama::proto::BlockInfo;
 using alimama::proto::SliceInfo;
+using alimama::proto::DataInfo;
 using alimama::proto::Slice2BlockRequest;
 using alimama::proto::Slice2BlockResponse;
 
@@ -42,16 +43,13 @@ using alimama::proto::NodeService;
 
 
 string local_path = "./tmp";
-// block size is 6.4MB
-// int block_size = 1048576;
 
-// 这部分还要改的
-int block_size = 64000;
-int slice_size = 6400000;
-int block_len = slice_size / block_size;
+int block_size = 6400000;
+// int slice_size = 6400000;
+// int block_len = slice_size / block_size;
 int max_block_num = 6400;
 
-string test_version_path = "/root/testbench/model_2023_03_01_12_30_00";
+// string test_version_path = "/root/testbench/model_2023_03_01_12_30_00";
 
 // run a shell command
 void Command(string command){
@@ -78,8 +76,9 @@ void DownloadFileFromHDFS(string version){
 }
 
 // 计算指定slice号和slice内index号的数据块在整个版本数据中的实际块号
+// 不区分大小数据一律按大数据算，512/6.4=80，一个slice最多包含80个块
 int CalIndex(int slice, int index){
-    return slice*block_len+index;
+    return slice*80+index;
 }
 
 /*
@@ -95,21 +94,33 @@ class BlockInMemory{
         // 构造函数
         BlockInMemory(){
             current_count = 0;
-            blocks = new char*[max_block_num];
+            blocks = new BlockData*[max_block_num];
         }
 
-        char* GetBlockData(int slice, int index){
+        string GetBlockData(int slice, int index){
             int block = CalIndex(slice, index);
             int actual_index = block_index[block];
-            return blocks[actual_index];
+            BlockData blockdata = *blocks[actual_index];
+            return blockdata.data();
         }
 
-        void AddBlock(int slice, int index, string block_data){
+        // void AddBlock(int slice, int index, string block_data){
+        //     int block_index_ = CalIndex(slice, index);
+        //     char* block_local = new char[block_size];
+        //     memcpy(block_local, block_data.c_str(), block_size);
+        //     block_index[block_index_] = current_count;
+        //     blocks[current_count++] = block_local;
+        // }
+
+        void AddBlock(BlockData blockdata){
+            BlockData* bl = new BlockData;
+            BlockInfo* bi = new BlockInfo;
+            int slice = blockdata.info().slice_partition(), index = blockdata.info().index();
+            bl->mutable_info()->CopyFrom(blockdata.info());
+            bl->set_data(blockdata.data());
             int block_index_ = CalIndex(slice, index);
-            char* block_local = new char[block_size];
-            memcpy(block_local, block_data.c_str(), block_size);
             block_index[block_index_] = current_count;
-            blocks[current_count++] = block_local;
+            blocks[current_count++] = bl;
         }
 
         void RemoveAll(){
@@ -121,9 +132,10 @@ class BlockInMemory{
             cout << "Delect done!" << endl;
         }
 
-    private:
         unordered_map<int, int> block_index;
-        char** blocks;
+        BlockData** blocks;
+        int slice_size;
+        // vector<BlockData> blocks;
 };
 
 
@@ -153,16 +165,6 @@ struct HandleContext : public HandleContextBase {
     HandleContext() : responder_(&ctx_){}
 };
 
-// 处理LoadAndRemove rpc请求上下文，服务器流式传输
-struct HandleLoadAndRemoveContext : public HandleContextBase {
-    LoadAndRemoveRequest    req_;
-    LoadAndRemoveResponse   rep_;
-    ServerAsyncWriter<LoadAndRemoveResponse>       responder_;
-    // 构造函数
-    HandleLoadAndRemoveContext() : responder_(&ctx_){}
-};
-
-
 
 // 处理GetBlockData rpc请求上下文
 typedef HandleContext<GetBlockDataRequest, GetBlockDataResponse> HandleGetBlockDataContext;
@@ -170,8 +172,9 @@ typedef HandleContext<GetBlockDataRequest, GetBlockDataResponse> HandleGetBlockD
 // 处理SendCopy rpc请求上下文
 typedef HandleContext<SendCopyRequest, SendCopyResponse> HandleSendCopyContext;
 
-
-// typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemoveContext;
+// 处理LoadAndRemove请求
+typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemove1Context;
+typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemove2Context;
 
 // 处理Slice2Block rpc请求上下文
 typedef HandleContext<Slice2BlockRequest, Slice2BlockResponse> HandleSlice2BlockContext;
@@ -241,7 +244,7 @@ class Node final{
         vector<thread> threads;
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
-            thread t(LoadAndSend, sliceinfo);
+            thread t(LoadAndSend, sliceinfo, true);
             threads.push_back(t);
         }
 
@@ -256,7 +259,7 @@ class Node final{
     /*
         加载某个slice并切块和发送到指定节点
     */
-    void LoadAndSend(SliceInfo sliceinfo){
+    void LoadAndSend(SliceInfo sliceinfo, bool sendcopy2){
         string version = sliceinfo.version();
         int slice = sliceinfo.slice_partition();
         // string filename = local_path + "/" + version + "/";
@@ -291,30 +294,28 @@ class Node final{
                 char* block = new char[block_size];
                 reader.Read(i*block_size, block_size, block);
                 BlockData blockdata;
-                blockdata.set_slice_partition(blockinfo.slice_partition());
-                blockdata.set_block_index(blockinfo.index());
-                blockdata.set_node1(to_string(blockinfo.node_id1()));
-                blockdata.set_node2(to_string(blockinfo.node_id2()));
-                blockdata.set_version(version);
+                blockdata.mutable_info()->CopyFrom(blockinfo);
                 blockdata.set_data(block);
 
-                int block_index = CalIndex(blockdata.slice_partition(), blockdata.block_index());
+                int block_index = CalIndex(blockinfo.slice_partition(), blockinfo.index());
                 
                 // 调用client发送块，如果是当前节点的块，直接保存到内存
                 // 发送副本1
                 if(to_string(blockinfo.node_id1()) == node_name){
-                    blocks_copy1[version].AddBlock(blockdata.slice_partition(), blockdata.block_index(), blockdata.data());
+                    blocks_copy1[version].AddBlock(blockdata);
                     copy_num[version][block_index] = 1;
                 }else{
                     clients[blockinfo.node_id1()].SendCopy(blockdata);
                 }
 
                 // 发送副本2
-                if(to_string(blockinfo.node_id2()) == node_name){
-                    blocks_copy2[version].AddBlock(blockdata.slice_partition(), blockdata.block_index(), blockdata.data());
-                    copy_num[version][block_index] = 2;
-                }else{
-                    clients[blockinfo.node_id2()].SendCopy(blockdata);
+                if(sendcopy2){
+                    if(to_string(blockinfo.node_id2()) == node_name){
+                        blocks_copy2[version].AddBlock(blockdata);
+                        copy_num[version][block_index] = 2;
+                    }else{
+                        clients[blockinfo.node_id2()].SendCopy(blockdata);
+                    }
                 }
 
                 delete block;
@@ -357,27 +358,19 @@ class Node final{
     */
     Status GetBlockData(ServerContext* context, const GetBlockDataRequest* request, GetBlockDataResponse* responde) {
         int block_index, copy_num_, slice, index;
-        char* block;
-        for(int i=0; i<request->block_info_size(); i++){
-            BlockInfo blockinfo = request->block_info(i);
-            BlockData blockdata;
-            slice = blockinfo.slice_partition();
-            index = blockinfo.index();
-            blockdata.set_slice_partition(slice);
-            blockdata.set_block_index(index);
-            blockdata.set_node1("node" + to_string(blockinfo.node_id1()));
-            blockdata.set_node2("node" + to_string(blockinfo.node_id2()));
-            blockdata.set_version(current_version);
-            block_index = CalIndex(slice, index);
-            copy_num_ = copy_num[current_version][block_index];
-            if(copy_num_ == 1){
-                block = blocks_copy1[current_version].GetBlockData(slice, index);
-            }else{
-                block = blocks_copy2[current_version].GetBlockData(slice, index);
-            }
-            blockdata.set_data(block);
-            responde->add_block_data()->CopyFrom(blockdata);
+        string block, version;
+        DataInfo di = request->data_info();
+        slice = di.slice_partition();
+        index = di.index();
+        version = di.version();
+        block_index = CalIndex(slice, index);
+        if(copy_num[version][block_index] == 1){
+            block = blocks_copy1[version].GetBlockData(slice, index);
+        }else{
+            block = blocks_copy2[version].GetBlockData(slice, index);
         }
+        string block_final = block.substr(di.start(), di.len());
+        responde->set_block_data(block_final);
         return Status::OK;
     }
 
@@ -404,13 +397,13 @@ class Node final{
     Status SendCopy(ServerContext* context, const SendCopyRequest* request, SendCopyResponse* responde) {
         // node1 == 自身node号，存储在第一个副本；否则存储在第二个副本
         BlockData blockdata = request->block_data();
-        int block_index = CalIndex(blockdata.slice_partition(), blockdata.block_index());
-        if(node_name == blockdata.node1()){
-            blocks_copy1[blockdata.version()].AddBlock(blockdata.slice_partition(), blockdata.block_index(), blockdata.data());
-            copy_num[blockdata.version()][block_index] = 1;
+        int block_index = CalIndex(blockdata.info().slice_partition(), blockdata.info().index());
+        if(node_name == to_string(blockdata.info().node_id1())){
+            blocks_copy1[blockdata.info().version()].AddBlock(blockdata);
+            copy_num[blockdata.info().version()][block_index] = 1;
         }else{
-            blocks_copy2[blockdata.version()].AddBlock(blockdata.slice_partition(), blockdata.block_index(), blockdata.data());
-            copy_num[blockdata.version()][block_index] = 2;
+            blocks_copy2[blockdata.info().version()].AddBlock(blockdata);
+            copy_num[blockdata.info().version()][block_index] = 2;
         }
         responde->set_ok(true);
         return Status::OK;
@@ -435,17 +428,52 @@ class Node final{
         7、pd将所有包含旧版本的请求回复
         8、系统进入新版本
     */
-    Status LoadAndRemove(ServerContext* context, const LoadAndRemoveRequest* request, ServerAsyncWriter<LoadAndRemoveResponse>* responde) {
-        for(int i=0;i<request->slice_info_size();i++){
+    Status LoadAndRemove1(ServerContext* context, const LoadAndRemoveRequest* request, LoadAndRemoveResponse* responde) {
+        next_version = request->slice_info(0).version();
 
+        vector<thread> threads;
+        for(int i = 0; i < request->slice_info_size(); i++){
+            SliceInfo sliceinfo = request->slice_info(i);
+            // sendcopy2 == false，暂时不发送第二个副本
+            thread t(LoadAndSend, sliceinfo, false);
+            threads.push_back(t);
         }
-        // for(int i = 0; i < 2; i++){
-        //     LoadAndRemoveResponse reply;
-        //     reply.set_ok(true);
-        //     responde->Write(reply);
-        // }
-        current_version = next_version;
+
+        for(int i = 0; i<request->slice_info_size();i++){
+            threads[i].join();
+        }
+
+        responde->set_ok(true);
         return Status::OK;
+    }
+
+    Status LoadAndRemove2(ServerContext* context, const LoadAndRemoveRequest* request, LoadAndRemoveResponse* responde) {
+        BlockInMemory bm = blocks_copy1[next_version];
+
+        vector<thread> send_threads;
+        // 创建多个线程，每个线程上运行一个client异步监听
+        for(int i=1; i<=6;i++){
+            if(to_string(i) != node_name){
+                thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
+                send_threads.push_back(t);
+            }
+        }
+
+        // 读取副本1的block信息中保存的第二个节点号，发送副本
+        for(int i=0; i<bm.current_count; i++){
+            clients[bm.blocks[i]->info().node_id2()].SendCopy(*(bm.blocks[i]));
+        }
+
+        return Status::OK;
+    }
+
+    void Remove(int copy_id){
+        if(copy_id == 1){
+            blocks_copy1[current_version].RemoveAll();
+            current_version = next_version;
+        }else{
+            blocks_copy2[current_version].RemoveAll();
+        }
     }
 
     void Run(){
@@ -469,14 +497,18 @@ class Node final{
             HandleGetBlockDataContext* hgbc = new HandleGetBlockDataContext;
             hgbc->type_ = 3;        // 设置类型3， 获取某个块rpc调用
             hgbc->status_ = 1;
-            HandleLoadAndRemoveContext* hlrc = new HandleLoadAndRemoveContext;
-            hlrc->type_ = 4;        // 设置类型4，加载新版本和卸载旧版本信息
-            hlrc->status_ = 1;
+            HandleLoadAndRemove1Context* hlr1c = new HandleLoadAndRemove1Context;
+            hlr1c->type_ = 4;        // 设置类型4，发送新版本的第一个副本和删除旧版本的第二个副本
+            hlr1c->status_ = 1;
+            HandleLoadAndRemove2Context* hlr2c = new HandleLoadAndRemove2Context;
+            hlr2c->type_ = 5;        // 设置类型5，发送新版本第二个副本和删除旧版本的第一个副本
+            hlr2c->status_ = 1;
 
             service_->RequestSlice2Block(&hs2bc->ctx_, &hs2bc->req_, &hs2bc->responder_, cq_ptr.get(), cq_ptr.get(), hs2bc);
             service_->RequestSendCopy(&hscc->ctx_, &hscc->req_, &hscc->responder_, cq_ptr.get(), cq_ptr.get(), hscc);
             service_->RequestGetBlockData(&hgbc->ctx_, &hgbc->req_, &hgbc->responder_, cq_ptr.get(), cq_ptr.get(), hgbc);
-            service_->RequestLoadAndRemove(&hlrc->ctx_, &hlrc->req_, &hlrc->responder_, cq_ptr.get(), cq_ptr.get(), hlrc);
+            service_->RequestLoadAndRemove1(&hlr1c->ctx_, &hlr1c->req_, &hlr1c->responder_, cq_ptr.get(), cq_ptr.get(), hlr1c);
+            service_->RequestLoadAndRemove2(&hlr2c->ctx_, &hlr2c->req_, &hlr2c->responder_, cq_ptr.get(), cq_ptr.get(), hlr2c);
         }
 
         // 创建线程池
@@ -516,7 +548,12 @@ class Node final{
                     break;
                     case 4:
                     {
-                        delete (HandleLoadAndRemoveContext*)hcb;
+                        delete (HandleLoadAndRemove1Context*)hcb;
+                    }
+                    break;
+                    case 5:
+                    {
+                        delete (HandleLoadAndRemove2Context*)hcb;
                     }
                     break;
                 }
@@ -547,10 +584,17 @@ class Node final{
                 }
                 break;
                 case 4: {
-                    HandleLoadAndRemoveContext* hlrc = new HandleLoadAndRemoveContext;
-                    hlrc->status_ = 1;
-                    hlrc->type_ = 4;
-                    service_->RequestLoadAndRemove(&hlrc->ctx_, &hlrc->req_, &hlrc->responder_, cq_ptr.get(), cq_ptr.get(), hlrc);
+                    HandleLoadAndRemove1Context* hlr1c = new HandleLoadAndRemove1Context;
+                    hlr1c->status_ = 1;
+                    hlr1c->type_ = 4;
+                    service_->RequestLoadAndRemove1(&hlr1c->ctx_, &hlr1c->req_, &hlr1c->responder_, cq_ptr.get(), cq_ptr.get(), hlr1c);
+                }
+                break;
+                case 5: {
+                    HandleLoadAndRemove2Context* hlr2c = new HandleLoadAndRemove2Context;
+                    hlr2c->status_ = 1;
+                    hlr2c->type_ = 5;
+                    service_->RequestLoadAndRemove2(&hlr2c->ctx_, &hlr2c->req_, &hlr2c->responder_, cq_ptr.get(), cq_ptr.get(), hlr2c);
                 }
                 break;
             }
@@ -583,10 +627,23 @@ class Node final{
                     }
                     break;
                     case 4: {
-                        HandleLoadAndRemoveContext* hc = (HandleLoadAndRemoveContext*)hcb;
-                        Status status = LoadAndRemove(&hc->ctx_, &hc->req_, &hc->responder_);
+                        HandleLoadAndRemove1Context* hc = (HandleLoadAndRemove1Context*)hcb;
+                        Status status = LoadAndRemove1(&hc->ctx_, &hc->req_, &hc->rep_);
                         hc->status_ = 2;
-                        // hc->responder_.Finish();
+                        hc->responder_.Finish(hc->rep_, status, hcb);
+                        sleep(1);
+                        // 删除副本2
+                        Remove(2);
+                    }
+                    break;
+                    case 5: {
+                        HandleLoadAndRemove2Context* hc = (HandleLoadAndRemove2Context*)hcb;
+                        Status status = LoadAndRemove2(&hc->ctx_, &hc->req_, &hc->rep_);
+                        hc->status_ = 2;
+                        hc->responder_.Finish(hc->rep_, status, hcb);
+                        sleep(1);
+                        // 删除副本1
+                        Remove(1);
                     }
                     break;
                 }
@@ -596,7 +653,7 @@ class Node final{
 
     private:
         string server_port = "50051";
-        string client_port = "50052";
+        // string client_port = "50052";
         string node_name;
 
         // 多个客户端链接到不同的服务器
@@ -610,8 +667,7 @@ class Node final{
         unordered_map<string, BlockInMemory> blocks_copy1;
         // 副本2保存的块数据
         unordered_map<string, BlockInMemory> blocks_copy2;
-        // 服务器节点暂时保存的分割好但还没发送往各自服务器节点的slice块数据
-        unordered_map<int, BlockInMemory> blocks_buffer;
+
         // 映射申请的某一块数据是属于服务器上保存的第一副本还是第二副本
         unordered_map<string, unordered_map<int, int>> copy_num;
         // 目前的版本号
