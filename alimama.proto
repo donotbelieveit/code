@@ -50,6 +50,7 @@ message BlockData{
   string node1 = 3;
   string node2 = 4;
   bytes data = 5;
+  string version = 6;
 }
 
 message GetBlockDataRequest{
@@ -88,7 +89,7 @@ service NodeService{
 }
 
 message LoadAndRemoveRequest {
-  SliceInfo slice_info = 1;
+  repeated SliceInfo slice_info = 1;
 }
 message LoadAndRemoveResponse {
   bool ok = 1;
