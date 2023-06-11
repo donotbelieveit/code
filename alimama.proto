@@ -28,7 +28,9 @@ message BlockInfo{
   uint64 index = 2;
   uint32 node_id1 = 3;
   uint32 node_id2 = 4;
+  string version = 5;
 }
+
 message SliceInfo {
   string version = 1;
   uint64 slice_partition = 2;
@@ -45,20 +47,24 @@ message Slice2BlockResponse{
 
 
 message BlockData{
+  BlockInfo info = 1;
+  bytes data = 2;
+}
+
+message DataInfo {
   uint64 slice_partition = 1;
-  uint64 block_index = 2;
-  string node1 = 3;
-  string node2 = 4;
-  bytes data = 5;
-  string version = 6;
+  uint64 index = 2;
+  string version = 3;
+  uint32 start = 4;
+  uint32 len = 5;
 }
 
 message GetBlockDataRequest{
-  repeated BlockInfo block_info = 1;
+  DataInfo data_info = 1;
 }
 
 message GetBlockDataResponse{
-  repeated BlockData block_data = 1;
+  bytes block_data = 1;
 }
 
 message SendCopyRequest{
@@ -82,7 +88,8 @@ service NodeService{
   //接受完成后向pd发送ok，等待1s
   //pd将所有包含旧版本请求回复
   //系统进入新版本
-  rpc LoadAndRemove(LoadAndRemoveRequest) returns (stream LoadAndRemoveResponse) {}
+  rpc LoadAndRemove1(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
+  rpc LoadAndRemove2(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
   //按照version进入版本文件夹，读取指定slice
   //load完slice后，根据block_info将buffer中的data发往指定节点
   rpc Slice2Block(Slice2BlockRequest) returns (Slice2BlockResponse) {}
