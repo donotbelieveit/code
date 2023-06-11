@@ -5,6 +5,7 @@
 #include<dirent.h>
 #include"ModelSliceReader.h"
 #include"ThreadPool.h"
+#include"sendcopy_client.h"
 #include<unordered_map>
 #include<vector>
 
@@ -12,11 +13,13 @@
 #include "alimama.grpc.pb.h"
 #include<grpcpp/grpcpp.h>
 
+
 using namespace std;
 
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
 using grpc::ServerAsyncWriter;
+using grpc::ServerReaderWriter;
 using grpc::ServerBuilder;
 using grpc::ServerCompletionQueue;
 using grpc::Status;
@@ -101,41 +104,6 @@ class BlockInMemory{
             return blocks[actual_index];
         }
 
-        void LoadBlock(int slice, string version){
-            // string filename = local_path + "/" + version + "/";
-            string filename = version + "/";
-
-            DIR *dir;
-            // dir is not exist, new version is coming, load from hdfs
-            if((dir = opendir(filename.c_str())) == NULL){
-                DownloadFileFromHDFS(version);
-            }
-
-            // int slice_size = 0;
-
-
-            if(slice>9)
-                filename += "model_slice." + to_string(slice);
-            else
-                filename += "model_slice.0" + to_string(slice);
-    
-            ModelSliceReader reader;
-
-            if(reader.Load(filename)){
-                cout << "Load file" << endl;
-                for(int i=0; i < (slice_size / block_size); i++){
-                    char* block = new char[block_size];
-                    int index = slice*block_len+i;
-                    reader.Read(i*block_size, block_size, block);
-                    block_index[index] = current_count;
-                    blocks[current_count++] = block;
-                    // delete block;
-                }
-
-                reader.Unload();
-            }
-        }
-
         void AddBlock(int slice, int index, string block_data){
             int block_index_ = CalIndex(slice, index);
             char* block_local = new char[block_size];
@@ -158,46 +126,6 @@ class BlockInMemory{
         char** blocks;
 };
 
-// unordered_map<string, BlockInMemory> version_blocks;
-
-
-// // 加载块到内存内
-// void LoadNewBlock2Buf(vector<char*> *buffer, unordered_map<int, int> *index_hash, string version, int slice){
-//     // string filename = local_path + "/" + version + "/";
-//     string filename = version + "/";
-
-//     DIR *dir;
-//     // dir is not exist, new version is coming, load from hdfs
-//     if((dir = opendir(filename.c_str())) == NULL){
-//         DownloadFileFromHDFS(version);
-//     }
-
-//     if(slice>9)
-//         filename += "model_slice." + to_string(slice);
-//     else
-//         filename += "model_slice.0" + to_string(slice);
-
-//     cout << filename << endl;
-    
-//     ModelSliceReader reader;
-
-//     if(reader.Load(filename)){
-//         cout << "Load file" << endl;
-//         for(int i=0; i < (slice_size / block_size); i++){
-//             char* block = new char[block_size];
-//             int index = slice*block_len+i;
-//             reader.Read(i*block_size, block_size, block);
-//             index_hash->emplace(index, buffer->size());
-//             buffer->push_back(block);
-//             // delete block;
-//         }
-
-//         reader.Unload();
-//     }
-
-//     cout << "Load block done!" << endl;
-//     cout << "load blocks: " << buffer->size() << endl;
-// }
 
 /*
     父结构体，保存共有属性
@@ -254,10 +182,17 @@ typedef HandleContext<Slice2BlockRequest, Slice2BlockResponse> HandleSlice2Block
 class Node final{
     public:
     // 构造函数 接收每个服务器节点的server端口号以便发送消息
-    Node(string name_, vector<pair<string, string>> node_list){
+    Node(string name_){
         node_name = name_;
-        for(auto p: node_list){
-            node_channel[p.first] = p.second;
+        string target_address;
+        for(int i=1; i<=6; i++){
+            if(to_string(i) == name_){
+                continue;
+            }else{
+                target_address = "node" + to_string(i) + ":" + server_port;
+                SendCopyClient client(grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
+                clients.emplace(i, client);
+            }
         }
         current_version = "";
         next_version = "";
@@ -293,7 +228,6 @@ class Node final{
     该rpc调用完成加载指定version和分片的模型数据，并将该分片分成固定大小的块发送到不同的
     服务器节点上进行保存
     */
-   // 没写完 待改 还没有发送块
     Status Slice2Block(ServerContext* context, const Slice2BlockRequest* request, Slice2BlockResponse* responde) {
         int slice;
         string version = request->slice_info(0).version();
@@ -302,15 +236,96 @@ class Node final{
         }else if(current_version != version){
             next_version = version;
         }
+
+        // 分割slice成块
+        vector<thread> threads;
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
-            BlockInMemory slice_block;
-            slice = sliceinfo.slice_partition();
-            slice_block.LoadBlock(slice, version);
-            blocks_buffer[slice] = slice_block;
+            thread t(LoadAndSend, sliceinfo);
+            threads.push_back(t);
         }
+
+        for(int i = 0; i<request->slice_info_size();i++){
+            threads[i].join();
+        }
+
         responde->set_ok(true);
         return Status::OK;
+    }
+
+    /*
+        加载某个slice并切块和发送到指定节点
+    */
+    void LoadAndSend(SliceInfo sliceinfo){
+        string version = sliceinfo.version();
+        int slice = sliceinfo.slice_partition();
+        // string filename = local_path + "/" + version + "/";
+        string filename = version + "/";
+
+        DIR *dir;
+        // dir is not exist, new version is coming, load from hdfs
+        if((dir = opendir(filename.c_str())) == NULL){
+            DownloadFileFromHDFS(version);
+        }
+
+        if(slice>9)
+            filename += "model_slice." + to_string(slice);
+        else
+            filename += "model_slice.0" + to_string(slice);
+    
+        ModelSliceReader reader;
+        vector<thread> send_threads;
+
+        // 创建多个线程，每个线程上运行一个client异步监听
+        for(int i=1; i<=6;i++){
+            if(to_string(i) != node_name){
+                thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
+                send_threads.push_back(t);
+            }
+        }
+
+        if(reader.Load(filename)){
+            cout << "Load file: " << filename << endl;
+            for(int i=0; i < sliceinfo.block_info_size(); i++){
+                BlockInfo blockinfo = sliceinfo.block_info(i);
+                char* block = new char[block_size];
+                reader.Read(i*block_size, block_size, block);
+                BlockData blockdata;
+                blockdata.set_slice_partition(blockinfo.slice_partition());
+                blockdata.set_block_index(blockinfo.index());
+                blockdata.set_node1(to_string(blockinfo.node_id1()));
+                blockdata.set_node2(to_string(blockinfo.node_id2()));
+                blockdata.set_version(version);
+                blockdata.set_data(block);
+
+                int block_index = CalIndex(blockdata.slice_partition(), blockdata.block_index());
+                
+                // 调用client发送块，如果是当前节点的块，直接保存到内存
+                // 发送副本1
+                if(to_string(blockinfo.node_id1()) == node_name){
+                    blocks_copy1[version].AddBlock(blockdata.slice_partition(), blockdata.block_index(), blockdata.data());
+                    copy_num[version][block_index] = 1;
+                }else{
+                    clients[blockinfo.node_id1()].SendCopy(blockdata);
+                }
+
+                // 发送副本2
+                if(to_string(blockinfo.node_id2()) == node_name){
+                    blocks_copy2[version].AddBlock(blockdata.slice_partition(), blockdata.block_index(), blockdata.data());
+                    copy_num[version][block_index] = 2;
+                }else{
+                    clients[blockinfo.node_id2()].SendCopy(blockdata);
+                }
+
+                delete block;
+            }
+
+            for(int i=0; i<send_threads.size(); i++){
+                send_threads[i].join();
+            }
+
+            reader.Unload();
+        }
     }
 
     /*
@@ -424,25 +439,18 @@ class Node final{
         for(int i=0;i<request->slice_info_size();i++){
 
         }
-        LoadAndRemoveResponse* rep_ = new LoadAndRemoveResponse;
-        rep_->set_ok(true);
-        // responde->Write((const LoadAndRemoveResponse)rep_);
-        // 系统等待1s
-        sleep(1);
-
-        // 删除旧版本第二个副本内容
-        blocks_copy2[current_version].RemoveAll();
-        
-
-        sleep(1);
-        blocks_copy1[current_version].RemoveAll();
+        // for(int i = 0; i < 2; i++){
+        //     LoadAndRemoveResponse reply;
+        //     reply.set_ok(true);
+        //     responde->Write(reply);
+        // }
         current_version = next_version;
         return Status::OK;
     }
 
     void Run(){
         ServerBuilder builder;
-        string server_address("0.0.0.0:" + node_channel[node_name]);
+        string server_address("0.0.0.0:" + server_port);
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
         builder.RegisterService(service_);
 
@@ -587,8 +595,12 @@ class Node final{
     }
 
     private:
-        map<string, string> node_channel;
+        string server_port = "50051";
+        string client_port = "50052";
         string node_name;
+
+        // 多个客户端链接到不同的服务器
+        unordered_map<int, SendCopyClient> clients;
 
         NodeService::AsyncService* service_;
         unique_ptr<Server> server_;
