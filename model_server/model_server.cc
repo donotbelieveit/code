@@ -275,7 +275,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
         template<typename T>
         void load_model(std::string version_name,std::unordered_map<int, BlockInfo> &block_map,std::vector<T> request){
             const char* hdfsUrl = "hdfs://namenode:9000";
-            const char* directoryPath = "/path/to/hdfs/directory";  // 要监听的 HDFS 目录路径
+            const char* directoryPath = "";  // 要监听的 HDFS 目录路径
 
             hdfsFS fs = hdfsConnect(hdfsUrl, 0);
             if (fs == NULL) {
@@ -325,8 +325,8 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
             //读取第二行，获取slice_size
             int slice_size = -1;
-            size_t slicePos = line.find("slice:");
-            size_t sizePos = line.find("size:");
+            size_t slicePos = secondLine.find("slice:");
+            size_t sizePos = secondLine.find("size:");
 
             if (slicePos != std::string::npos && sizePos != std::string::npos) {
                 std::string size = line.substr(sizePos + 5);
@@ -411,7 +411,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
         }
         void model_monitor(std::string work_dir){
             const char* hdfsUrl = "hdfs://namenode:9000";
-            const char* directoryPath = "/path/to/hdfs/directory";  // 要监听的 HDFS 目录路径
+            const char* directoryPath = "/";  // 要监听的 HDFS 目录路径
 
             hdfsFS fs = hdfsConnect(hdfsUrl, 0);
             if (fs == NULL) {
