@@ -8,6 +8,8 @@
 #include"sendcopy_client.h"
 #include<unordered_map>
 #include<vector>
+#include<etcd/Client.hpp>
+#include<boost/asio.hpp>
 
 
 #include "alimama.grpc.pb.h"
@@ -104,14 +106,6 @@ class BlockInMemory{
             return blockdata.data();
         }
 
-        // void AddBlock(int slice, int index, string block_data){
-        //     int block_index_ = CalIndex(slice, index);
-        //     char* block_local = new char[block_size];
-        //     memcpy(block_local, block_data.c_str(), block_size);
-        //     block_index[block_index_] = current_count;
-        //     blocks[current_count++] = block_local;
-        // }
-
         void AddBlock(BlockData blockdata){
             BlockData* bl = new BlockData;
             BlockInfo* bi = new BlockInfo;
@@ -129,6 +123,7 @@ class BlockInMemory{
             }
             delete [] blocks;
             block_index.clear();
+            current_count = 0;
             cout << "Delect done!" << endl;
         }
 
@@ -185,16 +180,17 @@ typedef HandleContext<Slice2BlockRequest, Slice2BlockResponse> HandleSlice2Block
 class Node final{
     public:
     // 构造函数 接收每个服务器节点的server端口号以便发送消息
-    Node(string name_){
+    Node(int name_){
         node_name = name_;
         string target_address;
         for(int i=1; i<=6; i++){
-            if(to_string(i) == name_){
+            if(i == name_){
                 continue;
             }else{
                 target_address = "node" + to_string(i) + ":" + server_port;
                 SendCopyClient client(grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
                 clients.emplace(i, client);
+                cout << "Add client connnect to server " << i << endl;
             }
         }
         current_version = "";
@@ -204,6 +200,34 @@ class Node final{
     ~Node() {
         server_->Shutdown();
         cq_ptr->Shutdown();
+    }
+
+    void Login(){
+        //获取自身ip
+        boost::asio::io_context io_context;
+        boost::asio::ip::tcp::resolver resolver(io_context);
+        boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
+        boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
+        boost::asio::ip::tcp::resolver::iterator end;
+
+        etcd::Client etcdClient("etcd:2379");
+        while (it != end) {
+            boost::asio::ip::tcp::endpoint endpoint = *it++;
+            cout << "Local IP: " << endpoint.address().to_string() << std::endl;
+
+            //注册
+            string key = "/services/" + std::string("node_worker") ;
+            string value = endpoint.address().to_string()+":"+ server_port;
+            etcd::Response etcdResponse = etcdClient.set(key, value).get();
+
+            if (etcdResponse.is_ok()) {
+                cout << "Service registered successfully: " << key << " -> " << value << std::endl;
+            } else {
+                cerr << "Failed to register service: " << etcdResponse.error_message() << std::endl;
+            
+            }
+
+        }
     }
 
     /*
@@ -244,7 +268,7 @@ class Node final{
         vector<thread> threads;
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
-            thread t(LoadAndSend, sliceinfo, true);
+            thread t(&Node::LoadAndSend, this, sliceinfo, true);
             threads.push_back(t);
         }
 
@@ -281,7 +305,7 @@ class Node final{
 
         // 创建多个线程，每个线程上运行一个client异步监听
         for(int i=1; i<=6;i++){
-            if(to_string(i) != node_name){
+            if(i != node_name){
                 thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
                 send_threads.push_back(t);
             }
@@ -301,7 +325,7 @@ class Node final{
                 
                 // 调用client发送块，如果是当前节点的块，直接保存到内存
                 // 发送副本1
-                if(to_string(blockinfo.node_id1()) == node_name){
+                if(blockinfo.node_id1() == node_name){
                     blocks_copy1[version].AddBlock(blockdata);
                     copy_num[version][block_index] = 1;
                 }else{
@@ -310,7 +334,7 @@ class Node final{
 
                 // 发送副本2
                 if(sendcopy2){
-                    if(to_string(blockinfo.node_id2()) == node_name){
+                    if(blockinfo.node_id2() == node_name){
                         blocks_copy2[version].AddBlock(blockdata);
                         copy_num[version][block_index] = 2;
                     }else{
@@ -330,28 +354,20 @@ class Node final{
     }
 
     /*
-    BlockInfo{
-        int slice_partition: 该块属于哪一个分片数据
-        int index: 该块在这个分片数据中的索引号
-        int node_id1: 该块第一个副本所在的服务器节点号
-        int node_id2: 该块第二个副本所在的服务器节点号
-    }
-
-    BlockData{
-        int slice_partition: 该块属于的数据分片号
-        int block_index: 该块在该数据分片中的索引号
-        string node1: 该块第一个副本所在的服务器节点号
-        string node2: 该块第二个副本所在的服务器节点号
-        char* data: 块本体数据
-        string version: 该块属于哪个版本
+    DataInfo{
+        int slice_partition: 分片号
+        int index: 分片内块索引
+        string version: 版本号
+        int start: 读取的数据起始点
+        int len: 读取的数据长度
     }
 
     GetBlockDataRequest{
-        BlockInfo[] block_info: 需要读取的数据块的信息
+        DataInfo block_info: 需要读取的数据块的信息
     }
 
     GetBlockDataResponse{
-        BlockData[] block_data: 读取到的数据块本体和其他信息
+        string block_data: 读取到的数据块本体
     }
 
     该rpc调用完成根据接收到的data_info读取块，并将读取到的块数据返回给客户端
@@ -365,8 +381,19 @@ class Node final{
         version = di.version();
         block_index = CalIndex(slice, index);
         if(copy_num[version][block_index] == 1){
+            // current_count = 0, 数据已删除或是尚未加载进来
+            if(blocks_copy1[version].current_count == 0){
+                cout << "Didnot read from " << version << " slice " << slice << " index " << index << endl;
+                responde->set_block_data("");
+                return Status::OK;
+            }
             block = blocks_copy1[version].GetBlockData(slice, index);
         }else{
+            if(blocks_copy2[version].current_count == 0){
+                cout << "Didnot read from " << version << " slice " << slice << " index " << index << endl;
+                responde->set_block_data("");
+                return Status::OK;
+            }
             block = blocks_copy2[version].GetBlockData(slice, index);
         }
         string block_final = block.substr(di.start(), di.len());
@@ -380,12 +407,8 @@ class Node final{
     }
 
     BlockData{
-        int slice_partition: 该块属于的数据分片号
-        int block_index: 该块在该数据分片中的索引号
-        string node1: 该块第一个副本所在的服务器节点号
-        string node2: 该块第二个副本所在的服务器节点号
+        BlockInfo info: 块信息
         char* data: 块本体数据
-        string version: 该块属于哪个版本
     }
 
     SendCopyResponse{
@@ -398,7 +421,7 @@ class Node final{
         // node1 == 自身node号，存储在第一个副本；否则存储在第二个副本
         BlockData blockdata = request->block_data();
         int block_index = CalIndex(blockdata.info().slice_partition(), blockdata.info().index());
-        if(node_name == to_string(blockdata.info().node_id1())){
+        if(node_name == blockdata.info().node_id1()){
             blocks_copy1[blockdata.info().version()].AddBlock(blockdata);
             copy_num[blockdata.info().version()][block_index] = 1;
         }else{
@@ -443,6 +466,7 @@ class Node final{
             threads[i].join();
         }
 
+        cout << "Load new version " << next_version << " copy1 done!" << endl;
         responde->set_ok(true);
         return Status::OK;
     }
@@ -453,10 +477,14 @@ class Node final{
         vector<thread> send_threads;
         // 创建多个线程，每个线程上运行一个client异步监听
         for(int i=1; i<=6;i++){
-            if(to_string(i) != node_name){
+            if(i != node_name){
                 thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
                 send_threads.push_back(t);
             }
+        }
+
+        for(int i = 0; i<send_threads.size(); i++){
+            send_threads[i].join();
         }
 
         // 读取副本1的block信息中保存的第二个节点号，发送副本
@@ -464,13 +492,17 @@ class Node final{
             clients[bm.blocks[i]->info().node_id2()].SendCopy(*(bm.blocks[i]));
         }
 
+        cout << "Load new version " << next_version << " copy2 done!" << endl;
+        responde->set_ok(true);
         return Status::OK;
     }
 
     void Remove(int copy_id){
+        // 删除副本1的时候，此时节点中只剩新版本的两个副本，进入新的版本
         if(copy_id == 1){
             blocks_copy1[current_version].RemoveAll();
             current_version = next_version;
+            cout << "Transfer to new version " << current_version << endl;
         }else{
             blocks_copy2[current_version].RemoveAll();
         }
@@ -482,9 +514,14 @@ class Node final{
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
         builder.RegisterService(service_);
 
+        cout << "Listening at " << server_address << endl;
+
         cq_ptr = builder.AddCompletionQueue();
 
         server_ = builder.BuildAndStart();
+
+        // 注册到etcd
+        Login();
 
         // 进入死循环等待请求并处理之前先注册一下请求
         {
@@ -652,9 +689,9 @@ class Node final{
     }
 
     private:
-        string server_port = "50051";
+        string server_port = "5001";
         // string client_port = "50052";
-        string node_name;
+        int node_name;
 
         // 多个客户端链接到不同的服务器
         unordered_map<int, SendCopyClient> clients;
@@ -675,10 +712,17 @@ class Node final{
         string next_version;
 };
 
-// int main(int argc, char** argv){
-//     // old_version = new unordered_map<pair<int, int>, char*>();
-//     // auto old_version = new vector<char*>();
-    
+int main(int argc, char** argv){
+    // 初始化服务器节点
+    // 必须指定节点号
+    int node_number;
+    if(argc>1){
+        node_number = atoi(argv[1]);
+        Node node(node_number);
+        node.Run();
+    }else{
+        cout << "Node number is required." << endl;
+    }
 
-//     return 0;
-// }
+    return 0;
+}

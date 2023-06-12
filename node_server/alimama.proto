@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package alimama.proto;
+
+message SliceRequest {
+    uint64 slice_partition = 1;
+    uint64 data_start = 2;
+    uint64 data_len = 3;
+}
+
+message Request {
+  repeated SliceRequest slice_request = 1;
+}
+
+message Response {
+  int32 status = 1; // 0，返回结果ok，-1 服务发生内部错误
+  repeated bytes slice_data = 2;
+}
+
+service ModelService {
+  rpc Get(Request) returns (Response) {}
+}
+
+
+
+message BlockInfo{
+  uint64 slice_partition = 1;
+  uint64 index = 2;
+  uint32 node_id1 = 3;
+  uint32 node_id2 = 4;
+  string version = 5;
+}
+
+message SliceInfo {
+  string version = 1;
+  uint64 slice_partition = 2;
+  uint64 slice_size = 3;
+  repeated BlockInfo block_info = 4;
+}
+
+message Slice2BlockRequest{
+  repeated SliceInfo slice_info = 1;
+}
+
+message Slice2BlockResponse{
+  bool ok = 1;
+}
+
+
+message BlockData{
+  BlockInfo info = 1;
+  bytes data = 2;
+}
+
+message DataInfo {
+  uint64 slice_partition = 1;
+  uint64 index = 2;
+  string version = 3;
+  uint32 start = 4;
+  uint32 len = 5;
+}
+
+message GetBlockDataRequest{
+  DataInfo data_info = 1;
+}
+
+message GetBlockDataResponse{
+  bytes block_data = 1;
+}
+
+message SendCopyRequest{
+  BlockData block_data = 1;
+}
+
+message SendCopyResponse{
+  bool ok = 1;
+}
+
+service NodeService{
+  //发送读取请求节点根据data_info读取指定块，返回块的data
+  rpc GetBlockData(GetBlockDataRequest) returns (GetBlockDataResponse) {}
+  //节点读取slice后将副本传向指定节点
+  rpc SendCopy(SendCopyRequest) returns (SendCopyResponse) {}
+  //load新版本的slice并发送第一副本
+  //各节点接收到第一副本后向pd发送ok，等待1s，
+  //pd将包含旧版本第二副本的所有请求回复
+  //node将旧版本第二副本删除
+  //node将第二副本发送给指定节点
+  //接受完成后向pd发送ok，等待1s
+  //pd将所有包含旧版本请求回复
+  //系统进入新版本
+  rpc LoadAndRemove1(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
+  rpc LoadAndRemove2(LoadAndRemoveRequest) returns (LoadAndRemoveResponse) {}
+  //按照version进入版本文件夹，读取指定slice
+  //load完slice后，根据block_info将buffer中的data发往指定节点
+  rpc Slice2Block(Slice2BlockRequest) returns (Slice2BlockResponse) {}
+}
+
+message LoadAndRemoveRequest {
+  repeated SliceInfo slice_info = 1;
+}
+message LoadAndRemoveResponse {
+  bool ok = 1;
+}
+
+
+
