@@ -4,7 +4,7 @@
 #include<string>
 #include<dirent.h>
 #include"ModelSliceReader.h"
-#include"ThreadPool.h"
+// #include"ThreadPool.h"
 #include"sendcopy_client.h"
 #include<unordered_map>
 #include<vector>
@@ -168,8 +168,8 @@ typedef HandleContext<GetBlockDataRequest, GetBlockDataResponse> HandleGetBlockD
 typedef HandleContext<SendCopyRequest, SendCopyResponse> HandleSendCopyContext;
 
 // 处理LoadAndRemove请求
-typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemove1Context;
-typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemove2Context;
+typedef HandleContext<Slice2BlockRequest, LoadAndRemoveResponse> HandleLoadAndRemove1Context;
+typedef HandleContext<Slice2BlockRequest, LoadAndRemoveResponse> HandleLoadAndRemove2Context;
 
 // 处理Slice2Block rpc请求上下文
 typedef HandleContext<Slice2BlockRequest, Slice2BlockResponse> HandleSlice2BlockContext;
@@ -184,14 +184,14 @@ class Node final{
         node_name = name_;
         string target_address;
         for(int i=1; i<=6; i++){
-            if(i == name_){
-                continue;
-            }else{
+            // if(i == name_){
+            //     continue;
+            // }else{
                 target_address = "node" + to_string(i) + ":" + server_port;
                 SendCopyClient client(grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
-                clients.emplace(i, client);
+                clients.push_back(&client);
                 cout << "Add client connnect to server " << i << endl;
-            }
+            // }
         }
         current_version = "";
         next_version = "";
@@ -268,8 +268,7 @@ class Node final{
         vector<thread> threads;
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
-            thread t(LoadAndSend, sliceinfo, true);
-            threads.push_back(t);
+            threads.push_back(thread(&Node::LoadAndSend,this, sliceinfo, true));
         }
 
         for(int i = 0; i<request->slice_info_size();i++){
@@ -306,8 +305,7 @@ class Node final{
         // 创建多个线程，每个线程上运行一个client异步监听
         for(int i=1; i<=6;i++){
             if(i != node_name){
-                thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
-                send_threads.push_back(t);
+                send_threads.push_back(thread(&SendCopyClient::AsyncCompleteRpc, clients[i]));
             }
         }
 
@@ -329,7 +327,7 @@ class Node final{
                     blocks_copy1[version].AddBlock(blockdata);
                     copy_num[version][block_index] = 1;
                 }else{
-                    clients[blockinfo.node_id1()].SendCopy(blockdata);
+                    clients[blockinfo.node_id1()]->SendCopy(blockdata);
                 }
 
                 // 发送副本2
@@ -338,7 +336,7 @@ class Node final{
                         blocks_copy2[version].AddBlock(blockdata);
                         copy_num[version][block_index] = 2;
                     }else{
-                        clients[blockinfo.node_id2()].SendCopy(blockdata);
+                        clients[blockinfo.node_id2()]->SendCopy(blockdata);
                     }
                 }
 
@@ -451,15 +449,14 @@ class Node final{
         7、pd将所有包含旧版本的请求回复
         8、系统进入新版本
     */
-    Status LoadAndRemove1(ServerContext* context, const LoadAndRemoveRequest* request, LoadAndRemoveResponse* responde) {
+    Status LoadAndRemove1(ServerContext* context, const Slice2BlockRequest* request, LoadAndRemoveResponse* responde) {
         next_version = request->slice_info(0).version();
 
         vector<thread> threads;
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
             // sendcopy2 == false，暂时不发送第二个副本
-            thread t(LoadAndSend, sliceinfo, false);
-            threads.push_back(t);
+            threads.push_back(thread(&Node::LoadAndSend, this, sliceinfo, false));
         }
 
         for(int i = 0; i<request->slice_info_size();i++){
@@ -471,15 +468,14 @@ class Node final{
         return Status::OK;
     }
 
-    Status LoadAndRemove2(ServerContext* context, const LoadAndRemoveRequest* request, LoadAndRemoveResponse* responde) {
+    Status LoadAndRemove2(ServerContext* context, const Slice2BlockRequest* request, LoadAndRemoveResponse* responde) {
         BlockInMemory bm = blocks_copy1[next_version];
 
         vector<thread> send_threads;
         // 创建多个线程，每个线程上运行一个client异步监听
         for(int i=1; i<=6;i++){
             if(i != node_name){
-                thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
-                send_threads.push_back(t);
+                send_threads.push_back(thread(&SendCopyClient::AsyncCompleteRpc, clients[i]));
             }
         }
 
@@ -489,7 +485,7 @@ class Node final{
 
         // 读取副本1的block信息中保存的第二个节点号，发送副本
         for(int i=0; i<bm.current_count; i++){
-            clients[bm.blocks[i]->info().node_id2()].SendCopy(*(bm.blocks[i]));
+            clients[bm.blocks[i]->info().node_id2()]->SendCopy(*(bm.blocks[i]));
         }
 
         cout << "Load new version " << next_version << " copy2 done!" << endl;
@@ -549,7 +545,7 @@ class Node final{
         }
 
         // 创建线程池
-        ThreadPool pool(5);
+        // ThreadPool pool(5);
 
         while(true){
             // 已经注册了请求处理，这里阻塞从完成队列中取出一个请求进行处理
@@ -636,8 +632,10 @@ class Node final{
                 break;
             }
 
-            pool.enqueue([type, hcb, this](){
-                // 根据type执行相应的操作
+            // pool.enqueue([type, hcb, this](){
+                
+            // });
+            // 根据type执行相应的操作
                 switch (type)
                 {
                     case 1: {
@@ -684,7 +682,6 @@ class Node final{
                     }
                     break;
                 }
-            });
         }
     }
 
@@ -694,7 +691,7 @@ class Node final{
         int node_name;
 
         // 多个客户端链接到不同的服务器
-        unordered_map<int, SendCopyClient> clients;
+        vector<SendCopyClient*> clients;
 
         NodeService::AsyncService* service_;
         unique_ptr<Server> server_;
