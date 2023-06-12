@@ -21,7 +21,7 @@ LDFLAGS += -lpthread -letcd-cpp-api -lprotobuf -lgrpc++ -lgrpc -lz -lcpprest -ls
 %.pb.cc: %.proto
 	$(PROTOC) -I $(PROTOS_PATH) --cpp_out=. $<
 
-node_worker: alimama.pb.o alimama.grpc.pb.o model_server.o
+model_server: alimama.pb.o alimama.grpc.pb.o model_server.o
 	${CXX} -std=c++17 ${CPPFLAGS} $^ $(LDFLAGS) -o $@
 
 clean:

@@ -2,4 +2,5 @@
 
 
 
-cd demo_grpc_helloworld && make && cd ..
+cd model_server && make && cd ..
+cd node_server && make && cd ..

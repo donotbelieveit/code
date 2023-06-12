@@ -4,7 +4,7 @@
 #include<string>
 #include<dirent.h>
 #include"ModelSliceReader.h"
-#include"ThreadPool.h"
+// #include"ThreadPool.h"
 #include"sendcopy_client.h"
 #include<unordered_map>
 #include<vector>
@@ -38,7 +38,7 @@ using alimama::proto::GetBlockDataRequest;
 using alimama::proto::GetBlockDataResponse;
 using alimama::proto::SendCopyRequest;
 using alimama::proto::SendCopyResponse;
-using alimama::proto::Slice2BlockRequest;
+using alimama::proto::LoadAndRemoveRequest;
 using alimama::proto::LoadAndRemoveResponse;
 
 using alimama::proto::NodeService;
@@ -71,7 +71,7 @@ void DownloadFileFromHDFS(string version){
     if((dir = opendir((local_path + "/" + version).c_str())) != NULL){
         return;
     }
-    
+
     // 将新版本文件从hdfs下载到本地磁盘
     string hdfs_command = "hdfs dfs -fs hdfs://namenode:9000/ -get /" + version + " " + local_path;
     Command(hdfs_command);
@@ -90,47 +90,47 @@ int CalIndex(int slice, int index){
         block_index: 由slice和index映射到数据块中的索引
 */
 class BlockInMemory{
-    public:
-        int current_count;
+public:
+    int current_count;
 
-        // 构造函数
-        BlockInMemory(){
-            current_count = 0;
-            blocks = new BlockData*[max_block_num];
+    // 构造函数
+    BlockInMemory(){
+        current_count = 0;
+        blocks = new BlockData*[max_block_num];
+    }
+
+    string GetBlockData(int slice, int index){
+        int block = CalIndex(slice, index);
+        int actual_index = block_index[block];
+        BlockData blockdata = *blocks[actual_index];
+        return blockdata.data();
+    }
+
+    void AddBlock(BlockData blockdata){
+        BlockData* bl = new BlockData;
+        BlockInfo* bi = new BlockInfo;
+        int slice = blockdata.info().slice_partition(), index = blockdata.info().index();
+        bl->mutable_info()->CopyFrom(blockdata.info());
+        bl->set_data(blockdata.data());
+        int block_index_ = CalIndex(slice, index);
+        block_index[block_index_] = current_count;
+        blocks[current_count++] = bl;
+    }
+
+    void RemoveAll(){
+        for(int i = 0; i<current_count; i++){
+            delete [] blocks[i];
         }
+        delete [] blocks;
+        block_index.clear();
+        current_count = 0;
+        cout << "Delect done!" << endl;
+    }
 
-        string GetBlockData(int slice, int index){
-            int block = CalIndex(slice, index);
-            int actual_index = block_index[block];
-            BlockData blockdata = *blocks[actual_index];
-            return blockdata.data();
-        }
-
-        void AddBlock(BlockData blockdata){
-            BlockData* bl = new BlockData;
-            BlockInfo* bi = new BlockInfo;
-            int slice = blockdata.info().slice_partition(), index = blockdata.info().index();
-            bl->mutable_info()->CopyFrom(blockdata.info());
-            bl->set_data(blockdata.data());
-            int block_index_ = CalIndex(slice, index);
-            block_index[block_index_] = current_count;
-            blocks[current_count++] = bl;
-        }
-
-        void RemoveAll(){
-            for(int i = 0; i<current_count; i++){
-                delete [] blocks[i];
-            }
-            delete [] blocks;
-            block_index.clear();
-            current_count = 0;
-            cout << "Delect done!" << endl;
-        }
-
-        unordered_map<int, int> block_index;
-        BlockData** blocks;
-        int slice_size;
-        // vector<BlockData> blocks;
+    unordered_map<int, int> block_index;
+    BlockData** blocks;
+    int slice_size;
+    // vector<BlockData> blocks;
 };
 
 
@@ -178,20 +178,20 @@ typedef HandleContext<Slice2BlockRequest, Slice2BlockResponse> HandleSlice2Block
     节点类：每个服务器节点上的基本功能实现
 */
 class Node final{
-    public:
+public:
     // 构造函数 接收每个服务器节点的server端口号以便发送消息
     Node(int name_){
         node_name = name_;
         string target_address;
         for(int i=1; i<=6; i++){
-            if(i == name_){
-                continue;
-            }else{
-                target_address = "node" + to_string(i) + ":" + server_port;
-                SendCopyClient client(grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
-                clients.emplace(i, client);
-                cout << "Add client connnect to server " << i << endl;
-            }
+            // if(i == name_){
+            //     continue;
+            // }else{
+            target_address = "node" + to_string(i) + ":" + server_port;
+            SendCopyClient client(grpc::CreateChannel(target_address, grpc::InsecureChannelCredentials()));
+            clients.push_back(&client);
+            cout << "Add client connnect to server " << i << endl;
+            // }
         }
         current_version = "";
         next_version = "";
@@ -224,7 +224,7 @@ class Node final{
                 cout << "Service registered successfully: " << key << " -> " << value << std::endl;
             } else {
                 cerr << "Failed to register service: " << etcdResponse.error_message() << std::endl;
-            
+
             }
 
         }
@@ -268,8 +268,7 @@ class Node final{
         vector<thread> threads;
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
-            thread t(&Node::LoadAndSend, this, sliceinfo, true);
-            threads.push_back(t);
+            threads.push_back(thread(&Node::LoadAndSend,this, sliceinfo, true));
         }
 
         for(int i = 0; i<request->slice_info_size();i++){
@@ -299,15 +298,14 @@ class Node final{
             filename += "model_slice." + to_string(slice);
         else
             filename += "model_slice.0" + to_string(slice);
-    
+
         ModelSliceReader reader;
         vector<thread> send_threads;
 
         // 创建多个线程，每个线程上运行一个client异步监听
         for(int i=1; i<=6;i++){
             if(i != node_name){
-                thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
-                send_threads.push_back(t);
+                send_threads.push_back(thread(&SendCopyClient::AsyncCompleteRpc, clients[i]));
             }
         }
 
@@ -322,14 +320,14 @@ class Node final{
                 blockdata.set_data(block);
 
                 int block_index = CalIndex(blockinfo.slice_partition(), blockinfo.index());
-                
+
                 // 调用client发送块，如果是当前节点的块，直接保存到内存
                 // 发送副本1
                 if(blockinfo.node_id1() == node_name){
                     blocks_copy1[version].AddBlock(blockdata);
                     copy_num[version][block_index] = 1;
                 }else{
-                    clients[blockinfo.node_id1()].SendCopy(blockdata);
+                    clients[blockinfo.node_id1()]->SendCopy(blockdata);
                 }
 
                 // 发送副本2
@@ -338,7 +336,7 @@ class Node final{
                         blocks_copy2[version].AddBlock(blockdata);
                         copy_num[version][block_index] = 2;
                     }else{
-                        clients[blockinfo.node_id2()].SendCopy(blockdata);
+                        clients[blockinfo.node_id2()]->SendCopy(blockdata);
                     }
                 }
 
@@ -433,7 +431,7 @@ class Node final{
     }
 
     /*
-    Slice2BlockRequest{
+    LoadAndRemoveRequest{
         SliceInfo[] slice_info: 待加载的新版本分片slice信息
     }
 
@@ -458,8 +456,7 @@ class Node final{
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
             // sendcopy2 == false，暂时不发送第二个副本
-            thread t(&Node::LoadAndSend, this, sliceinfo, false);
-            threads.push_back(t);
+            threads.push_back(thread(&Node::LoadAndSend, this, sliceinfo, false));
         }
 
         for(int i = 0; i<request->slice_info_size();i++){
@@ -478,8 +475,7 @@ class Node final{
         // 创建多个线程，每个线程上运行一个client异步监听
         for(int i=1; i<=6;i++){
             if(i != node_name){
-                thread t = thread(&SendCopyClient::AsyncCompleteRpc, &clients[i]);
-                send_threads.push_back(t);
+                send_threads.push_back(thread(&SendCopyClient::AsyncCompleteRpc, clients[i]));
             }
         }
 
@@ -489,7 +485,7 @@ class Node final{
 
         // 读取副本1的block信息中保存的第二个节点号，发送副本
         for(int i=0; i<bm.current_count; i++){
-            clients[bm.blocks[i]->info().node_id2()].SendCopy(*(bm.blocks[i]));
+            clients[bm.blocks[i]->info().node_id2()]->SendCopy(*(bm.blocks[i]));
         }
 
         cout << "Load new version " << next_version << " copy2 done!" << endl;
@@ -512,16 +508,22 @@ class Node final{
         ServerBuilder builder;
         string server_address("0.0.0.0:" + server_port);
         builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-        builder.RegisterService(service_);
+        builder.RegisterService(&service_);
+        
 
         cout << "Listening at " << server_address << endl;
 
         cq_ptr = builder.AddCompletionQueue();
 
-        server_ = builder.BuildAndStart();
+        cout << "start server"  << endl;
+        server_ = std::unique_ptr<Server>(builder.BuildAndStart());
+        //server_(builder.BuildAndStart())
+        //server_ = builder.BuildAndStart();
 
         // 注册到etcd
+        cout << "logging to etcd"  << endl;
         Login();
+
 
         // 进入死循环等待请求并处理之前先注册一下请求
         {
@@ -541,15 +543,15 @@ class Node final{
             hlr2c->type_ = 5;        // 设置类型5，发送新版本第二个副本和删除旧版本的第一个副本
             hlr2c->status_ = 1;
 
-            service_->RequestSlice2Block(&hs2bc->ctx_, &hs2bc->req_, &hs2bc->responder_, cq_ptr.get(), cq_ptr.get(), hs2bc);
-            service_->RequestSendCopy(&hscc->ctx_, &hscc->req_, &hscc->responder_, cq_ptr.get(), cq_ptr.get(), hscc);
-            service_->RequestGetBlockData(&hgbc->ctx_, &hgbc->req_, &hgbc->responder_, cq_ptr.get(), cq_ptr.get(), hgbc);
-            service_->RequestLoadAndRemove1(&hlr1c->ctx_, &hlr1c->req_, &hlr1c->responder_, cq_ptr.get(), cq_ptr.get(), hlr1c);
-            service_->RequestLoadAndRemove2(&hlr2c->ctx_, &hlr2c->req_, &hlr2c->responder_, cq_ptr.get(), cq_ptr.get(), hlr2c);
+            service_.RequestSlice2Block(&hs2bc->ctx_, &hs2bc->req_, &hs2bc->responder_, cq_ptr.get(), cq_ptr.get(), hs2bc);
+            service_.RequestSendCopy(&hscc->ctx_, &hscc->req_, &hscc->responder_, cq_ptr.get(), cq_ptr.get(), hscc);
+            service_.RequestGetBlockData(&hgbc->ctx_, &hgbc->req_, &hgbc->responder_, cq_ptr.get(), cq_ptr.get(), hgbc);
+            service_.RequestLoadAndRemove1(&hlr1c->ctx_, &hlr1c->req_, &hlr1c->responder_, cq_ptr.get(), cq_ptr.get(), hlr1c);
+            service_.RequestLoadAndRemove2(&hlr2c->ctx_, &hlr2c->req_, &hlr2c->responder_, cq_ptr.get(), cq_ptr.get(), hlr2c);
         }
 
         // 创建线程池
-        ThreadPool pool(5);
+        // ThreadPool pool(5);
 
         while(true){
             // 已经注册了请求处理，这里阻塞从完成队列中取出一个请求进行处理
@@ -563,153 +565,154 @@ class Node final{
                 第一次注册请求处理时使用的是对象地址
                 直接从map中取出进行判断
             */
-           int type = hcb->type_;
-           // status为2时，响应已经发送
-           if(hcb->status_ == 2){
+            int type = hcb->type_;
+            // status为2时，响应已经发送
+            if(hcb->status_ == 2){
                 switch (type)
                 {
                     case 1:
                     {
                         delete (HandleSlice2BlockContext*)hcb;
                     }
-                    break;
+                        break;
                     case 2:
                     {
                         delete (HandleSendCopyContext*)hcb;
                     }
-                    break;
+                        break;
                     case 3:
                     {
                         delete (HandleGetBlockDataContext*)hcb;
                     }
-                    break;
+                        break;
                     case 4:
                     {
                         delete (HandleLoadAndRemove1Context*)hcb;
                     }
-                    break;
+                        break;
                     case 5:
                     {
                         delete (HandleLoadAndRemove2Context*)hcb;
                     }
-                    break;
+                        break;
                 }
                 continue;
-           }
+            }
 
-           // 重新创建一个请求处理上下文对象（以便接收下一个请求进行处理）
+            // 重新创建一个请求处理上下文对象（以便接收下一个请求进行处理）
             switch (type){
                 case 1: {
                     HandleSlice2BlockContext* hsbc = new HandleSlice2BlockContext;
                     hsbc->status_ = 1;
                     hsbc->type_ = 1;
-                    service_->RequestSlice2Block(&hsbc->ctx_, &hsbc->req_, &hsbc->responder_, cq_ptr.get(), cq_ptr.get(), hsbc);
+                    service_.RequestSlice2Block(&hsbc->ctx_, &hsbc->req_, &hsbc->responder_, cq_ptr.get(), cq_ptr.get(), hsbc);
                 }
-                break;
+                    break;
                 case 2: {
                     HandleSendCopyContext* hscc = new HandleSendCopyContext;
                     hscc->status_ = 1;
                     hscc->type_ = 2;
-                    service_->RequestSendCopy(&hscc->ctx_, &hscc->req_, &hscc->responder_, cq_ptr.get(), cq_ptr.get(), hscc);
+                    service_.RequestSendCopy(&hscc->ctx_, &hscc->req_, &hscc->responder_, cq_ptr.get(), cq_ptr.get(), hscc);
                 }
-                break;
+                    break;
                 case 3: {
                     HandleGetBlockDataContext* hgbc = new HandleGetBlockDataContext;
                     hgbc->status_ = 1;
                     hgbc->type_ = 3;
-                    service_->RequestGetBlockData(&hgbc->ctx_, &hgbc->req_, &hgbc->responder_, cq_ptr.get(), cq_ptr.get(), hgbc);
+                    service_.RequestGetBlockData(&hgbc->ctx_, &hgbc->req_, &hgbc->responder_, cq_ptr.get(), cq_ptr.get(), hgbc);
                 }
-                break;
+                    break;
                 case 4: {
                     HandleLoadAndRemove1Context* hlr1c = new HandleLoadAndRemove1Context;
                     hlr1c->status_ = 1;
                     hlr1c->type_ = 4;
-                    service_->RequestLoadAndRemove1(&hlr1c->ctx_, &hlr1c->req_, &hlr1c->responder_, cq_ptr.get(), cq_ptr.get(), hlr1c);
+                    service_.RequestLoadAndRemove1(&hlr1c->ctx_, &hlr1c->req_, &hlr1c->responder_, cq_ptr.get(), cq_ptr.get(), hlr1c);
                 }
-                break;
+                    break;
                 case 5: {
                     HandleLoadAndRemove2Context* hlr2c = new HandleLoadAndRemove2Context;
                     hlr2c->status_ = 1;
                     hlr2c->type_ = 5;
-                    service_->RequestLoadAndRemove2(&hlr2c->ctx_, &hlr2c->req_, &hlr2c->responder_, cq_ptr.get(), cq_ptr.get(), hlr2c);
+                    service_.RequestLoadAndRemove2(&hlr2c->ctx_, &hlr2c->req_, &hlr2c->responder_, cq_ptr.get(), cq_ptr.get(), hlr2c);
                 }
-                break;
+                    break;
             }
 
-            pool.enqueue([type, hcb, this](){
-                // 根据type执行相应的操作
-                switch (type)
-                {
-                    case 1: {
-                        HandleSlice2BlockContext* hc = (HandleSlice2BlockContext*)hcb;
-                        Status status = Slice2Block(&hc->ctx_, &hc->req_, &hc->rep_);
-                        // 执行完操作将状态改为发送响应
-                        hc->status_ = 2;
-                        // 调用responder_进行异步响应发送
-                        hc->responder_.Finish(hc->rep_, status, hcb); 
-                    }
-                    break;
-                    case 2: {
-                        HandleSendCopyContext* hc = (HandleSendCopyContext*)hcb;
-                        Status status = SendCopy(&hc->ctx_, &hc->req_, &hc->rep_);
-                        hc->status_ = 2;
-                        hc->responder_.Finish(hc->rep_, status, hcb);
-                    }
-                    break;
-                    case 3: {
-                        HandleGetBlockDataContext* hc = (HandleGetBlockDataContext*)hcb;
-                        Status status = GetBlockData(&hc->ctx_, &hc->req_, &hc->rep_);
-                        hc->status_ = 2;
-                        hc->responder_.Finish(hc->rep_, status, hcb);
-                    }
-                    break;
-                    case 4: {
-                        HandleLoadAndRemove1Context* hc = (HandleLoadAndRemove1Context*)hcb;
-                        Status status = LoadAndRemove1(&hc->ctx_, &hc->req_, &hc->rep_);
-                        hc->status_ = 2;
-                        hc->responder_.Finish(hc->rep_, status, hcb);
-                        sleep(1);
-                        // 删除副本2
-                        Remove(2);
-                    }
-                    break;
-                    case 5: {
-                        HandleLoadAndRemove2Context* hc = (HandleLoadAndRemove2Context*)hcb;
-                        Status status = LoadAndRemove2(&hc->ctx_, &hc->req_, &hc->rep_);
-                        hc->status_ = 2;
-                        hc->responder_.Finish(hc->rep_, status, hcb);
-                        sleep(1);
-                        // 删除副本1
-                        Remove(1);
-                    }
-                    break;
+            // pool.enqueue([type, hcb, this](){
+
+            // });
+            // 根据type执行相应的操作
+            switch (type)
+            {
+                case 1: {
+                    HandleSlice2BlockContext* hc = (HandleSlice2BlockContext*)hcb;
+                    Status status = Slice2Block(&hc->ctx_, &hc->req_, &hc->rep_);
+                    // 执行完操作将状态改为发送响应
+                    hc->status_ = 2;
+                    // 调用responder_进行异步响应发送
+                    hc->responder_.Finish(hc->rep_, status, hcb);
                 }
-            });
+                    break;
+                case 2: {
+                    HandleSendCopyContext* hc = (HandleSendCopyContext*)hcb;
+                    Status status = SendCopy(&hc->ctx_, &hc->req_, &hc->rep_);
+                    hc->status_ = 2;
+                    hc->responder_.Finish(hc->rep_, status, hcb);
+                }
+                    break;
+                case 3: {
+                    HandleGetBlockDataContext* hc = (HandleGetBlockDataContext*)hcb;
+                    Status status = GetBlockData(&hc->ctx_, &hc->req_, &hc->rep_);
+                    hc->status_ = 2;
+                    hc->responder_.Finish(hc->rep_, status, hcb);
+                }
+                    break;
+                case 4: {
+                    HandleLoadAndRemove1Context* hc = (HandleLoadAndRemove1Context*)hcb;
+                    Status status = LoadAndRemove1(&hc->ctx_, &hc->req_, &hc->rep_);
+                    hc->status_ = 2;
+                    hc->responder_.Finish(hc->rep_, status, hcb);
+                    sleep(1);
+                    // 删除副本2
+                    Remove(2);
+                }
+                    break;
+                case 5: {
+                    HandleLoadAndRemove2Context* hc = (HandleLoadAndRemove2Context*)hcb;
+                    Status status = LoadAndRemove2(&hc->ctx_, &hc->req_, &hc->rep_);
+                    hc->status_ = 2;
+                    hc->responder_.Finish(hc->rep_, status, hcb);
+                    sleep(1);
+                    // 删除副本1
+                    Remove(1);
+                }
+                    break;
+            }
         }
     }
 
-    private:
-        string server_port = "5001";
-        // string client_port = "50052";
-        int node_name;
+private:
+    string server_port = "5001";
+    // string client_port = "50052";
+    int node_name;
 
-        // 多个客户端链接到不同的服务器
-        unordered_map<int, SendCopyClient> clients;
+    // 多个客户端链接到不同的服务器
+    vector<SendCopyClient*> clients;
 
-        NodeService::AsyncService* service_;
-        unique_ptr<Server> server_;
-        unique_ptr<ServerCompletionQueue> cq_ptr;
+    NodeService::AsyncService service_;
+    unique_ptr<Server> server_;
+    unique_ptr<ServerCompletionQueue> cq_ptr;
 
-        // 副本1保存的块数据
-        unordered_map<string, BlockInMemory> blocks_copy1;
-        // 副本2保存的块数据
-        unordered_map<string, BlockInMemory> blocks_copy2;
+    // 副本1保存的块数据
+    unordered_map<string, BlockInMemory> blocks_copy1;
+    // 副本2保存的块数据
+    unordered_map<string, BlockInMemory> blocks_copy2;
 
-        // 映射申请的某一块数据是属于服务器上保存的第一副本还是第二副本
-        unordered_map<string, unordered_map<int, int>> copy_num;
-        // 目前的版本号
-        string current_version;
-        string next_version;
+    // 映射申请的某一块数据是属于服务器上保存的第一副本还是第二副本
+    unordered_map<string, unordered_map<int, int>> copy_num;
+    // 目前的版本号
+    string current_version;
+    string next_version;
 };
 
 int main(int argc, char** argv){

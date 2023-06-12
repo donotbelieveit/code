@@ -49,6 +49,13 @@ std::string WORK_DIR = "/";
 int BLOCK_SIZE = 6400000;
 
 
+bool startsWith(const std::string& str, const std::string& prefix) {
+    if (str.length() < prefix.length()) {
+        return false;
+    }
+    return (str.compare(0, prefix.length(), prefix) == 0);
+}
+
 //从path获取name
 template<typename T>
 char* get_name(T path){
@@ -413,6 +420,8 @@ class Scheduler final : public alimama::proto::ModelService::Service{
         void model_monitor(std::string work_dir){
             const char* hdfsUrl = "hdfs://namenode:9000";
             const char* directoryPath = "/";  // 要监听的 HDFS 目录路径
+            std::string prefix1 = "model";
+            std::string prefix2 = "rollback";
 
             hdfsFS fs = hdfsConnect(hdfsUrl, 0);
             if (fs == NULL) {
@@ -433,7 +442,14 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 std::vector<std::string> currentFiles;
 
                 for (int i = 0; i < numEntries; ++i) {
-                    const char* fileName = get_name(fileInfo[i].mName);
+                    const char* fileNameChars = get_name(fileInfo[i].mName);
+                    std::string fileName(fileNameChars);
+                    std::cout << "current file names: " << fileName << std::endl;
+                    if(!(startsWith(fileName,prefix1)||startsWith(fileName,prefix2))){
+                        delete[] fileNameChars;
+                        continue;
+                    }
+
                     currentFiles.push_back(fileName);
 
                     // 检查当前文件是否为新文件
