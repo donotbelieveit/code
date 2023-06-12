@@ -15,7 +15,9 @@
 #include <future>
 #include <hdfs/hdfs.h>
 #include <random>
+#include <boost/asio.hpp>
 #include <mutex>
+#include <etcd/Client.hpp>
 
 namespace fs = std::filesystem;
 
@@ -39,10 +41,15 @@ using alimama::proto::GetBlockDataResponse;
 using alimama::proto::SliceRequest;
 using alimama::proto::DataInfo;
 
+
+
+
 int NODE_NUM = 6;
-std::string WORK_DIR = ".";
+std::string WORK_DIR = "/";
 int BLOCK_SIZE = 6400000;
 
+
+//从path获取name
 template<typename T>
 char* get_name(T path){
     string tmp = "";
@@ -56,8 +63,36 @@ char* get_name(T path){
     }
     return tmp;
 }
+
+void register2etcd(int channel){
+    //获取自身ip
+    boost::asio::io_context io_context;
+    boost::asio::ip::tcp::resolver resolver(io_context);
+    boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
+    boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
+    boost::asio::ip::tcp::resolver::iterator end;
+
+    etcd::Client etcdClient("etcd:2379");
+    while (it != end) {
+        boost::asio::ip::tcp::endpoint endpoint = *it++;
+        std::cout << "Local IP: " << endpoint.address().to_string() << std::endl;
+
+        //注册
+        std::string key = "/services/modelservice/" + std::string("scheduler") ;
+        std::string value = endpoint.address().to_string()+":"+std::to_string(channel);
+        etcd::Response etcdResponse = etcdClient.set(key, value).get();
+
+        if (etcdResponse.is_ok()) {
+            std::cout << "Service registered successfully: " << key << " -> " << value << std::endl;
+        } else {
+            std::cerr << "Failed to register service: " << etcdResponse.error_message() << std::endl;
+        }
+    }
+
+}
 class Scheduler final : public alimama::proto::ModelService::Service{
     public:
+        
         Status Get(ServerContext* context, const alimama::proto::Request* request, alimama::proto::Response* response) override {
 
             // 设置返回结果的状态码
@@ -86,15 +121,19 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             }
             return Status::OK;
         }
+        //向各节点发送slice信息加载模型
         bool slice2block(std::unique_ptr<alimama::proto::NodeService::Stub>& stub,Slice2BlockRequest& request){
-            Slice2BlockResponse response;
+            Slice2BlockResponse response;   
             ClientContext context;
             Status status = stub->Slice2Block(&context,request,&response);
             if(status.ok()){
                 return true;
             }
+            int node = request.slice_info().begin()->slice_partition()%node_num;
+            std::cout<<"slice2block error on "<<node<<std::endl;
             return false;
         }
+        //向node发送getdata请求
         std::string send_get_block_data(int index,DataInfo info){
             GetBlockDataRequest request;
             request.set_allocated_data_info(&info);
@@ -104,20 +143,25 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             if(status.ok()){
                 return response.block_data();
             }else{
-                std::cerr<<"send_get_block_data error"<<std::endl;
+                std::cerr<<"send_get_block_data error on node-"<<index<<std::endl;
             }
             return "";
         }
         std::string get_block_data(int slice_partition,int data_start,int data_len){
+            //求下标
             int first_index = data_start%block_size;
             int last_index = (data_start+data_len)%block_size;
+
             std::vector<std::future<std::string>> futures;
+
 
             std::random_device rd;
             std::mt19937 gen(rd());
             std::uniform_int_distribution<int> dist(1, 2);
+
             bool flag = 0;
             mtx.lock();
+            //获取版本状态，switchstep为1时，两个版本各存在一个副本，为0时，只存在一个版本
             if(num_version==2){
                 if(switch_step==1){
                     flag = 1;
@@ -130,6 +174,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 datainfo.set_index(i);
                 int index = -1;
                 if(flag){
+                    //随机从两个版本选择一个
                     if(dist(gen)){
                         datainfo.set_version(version1);
                         index = block_map1[slice_partition*1000+i].node_id1();
@@ -139,6 +184,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                     }
                 }
                 else{
+                    //随机从两个副本选择一个
                     datainfo.set_version(version1);
                     if(dist(gen)){
                         index = block_map1[slice_partition*1000+i].node_id1();
@@ -146,6 +192,8 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                         index = block_map1[slice_partition*1000+i].node_id2();
                     }
                 }
+
+                //处理block边界
                 if(i==first_index){
                     datainfo.set_start(data_start%block_size);
                     datainfo.set_len(block_size-data_start%block_size);
@@ -170,13 +218,22 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             }
             return data;
         }
+        //向各节点发送load_and_remove请求
+        //阶段1，load新版本，删除旧版本第二副本
+        //阶段2，send新版本第二副本，删除旧版本
         void send_load_and_remove(int index,int step,LoadAndRemoveRequest& request){
             LoadAndRemoveResponse response;
             ClientContext context;
+            Status status;
             if(step==1)
-            Status status = stubs[index]->LoadAndRemove1(&context,request,&response);
+                status = stubs[index]->LoadAndRemove1(&context,request,&response);
             else
-            Status status = stubs[index]->LoadAndRemove2(&context,request,&response);
+                status = stubs[index]->LoadAndRemove2(&context,request,&response);
+            if(status.ok()){
+                std::cout<<"send_load_and_remove success at "<<step<<" on node-"<<index<<std::endl;
+            }else{
+                std::cerr<<"send_load_and_remove error at "<<step<<" on node-"<<index<<std::endl;
+            }
         }
         bool load_and_remove(std::vector<LoadAndRemoveRequest>& request){
             //第一阶段，load第一副本，remove旧版本第二副本
@@ -188,10 +245,13 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 thread.join();
             }
             threads.clear();
+
+            //进入switchstep1
             mtx.lock();
             num_version++;
             switch_step = 1;
             mtx.unlock();
+
             //第二阶段，send第二副本，remove旧版本第一副本，完成切换
             for(int i=0;i<node_num;i++){
                 LoadAndRemoveRequest request;
@@ -201,6 +261,8 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 thread.join();
             }
             threads.clear();
+
+            //切换完成，更新版本状态
             mtx.lock();
             num_version--;
             version1 = version2;
@@ -220,6 +282,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 std::cerr << "Failed to connect to HDFS" << std::endl;
             }
             std::string model_dir = std::string(directoryPath) + "/" + version_name;
+            //监听model.done文件    
             while(!hdfsExists(fs, (model_dir+"/model.done").c_str())){
                 std::cout<<"waiting for model done"<<std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(10)); 
@@ -239,7 +302,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             char buffer[bufferSize];
             std::string secondLine;
 
-            // Skip the first line
+            // 读取第二行的slice：xxx，size：xxx
             if (hdfsRead(fs, file, buffer, bufferSize) <= 0) {
                 std::cerr << "Failed to read file: " << filePath << std::endl;
                 hdfsCloseFile(fs, file);
@@ -317,8 +380,9 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 }
                 request[slice_partition%node_num].add_slice_info()->CopyFrom(slice_info);
             }
-            hdfsFreeFileInfo(fileInfoList, numEntries);
 
+            hdfsFreeFileInfo(fileInfoList, numEntries);
+            hdfsDisconnect(fs);
             //将block分配给node
             if(num_version==0){
                 std::vector<std::thread> threads;
@@ -329,13 +393,20 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                     thread.join();
                 }
                 threads.clear();
+
+
                 mtx.lock();
                 num_version++;
                 version1 = version_name;
                 mtx.unlock();
+
+                //load成功，注册
+                register2etcd(4567);
             }else{
                 load_and_remove(request);
             }
+
+            
 
         }
         void model_monitor(std::string work_dir){
@@ -406,7 +477,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
                 previousFiles = currentFiles;
 
-                std::this_thread::sleep_for(std::chrono::seconds(10));  // 休眠 1 秒后重新轮询目录
+                std::this_thread::sleep_for(std::chrono::seconds(10));  // 休眠 10 秒后重新轮询目录
             }
 
             hdfsDisconnect(fs);
@@ -423,6 +494,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             num_version = 0;
             work_dir = WORK_DIR;
             block_size = BLOCK_SIZE;
+            //添加各个node服务的stub
             for(int i = 1; i <= node_num; i++){
                 std::string addr = "node-" + std::to_string(i) + ":5001";
                 std::unique_ptr<NodeService::Stub> stub(NodeService::NewStub(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials())));
@@ -443,6 +515,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             
 
 
+
         }
     private:
         std::mutex mtx;
@@ -458,11 +531,12 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 };
 
 int main() {
-    Scheduler service;
+    Scheduler service = Scheduler();
     std::string server_address("node-1:4567");
     ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<Server> server(builder.BuildAndStart());
+    server->Wait();
     return 0;
 }
