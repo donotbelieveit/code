@@ -10,6 +10,7 @@
 #include<future>
 #include<functional>
 #include<stdexcept>
+#include<type_traits>
 
 using namespace std;
 
@@ -93,6 +94,9 @@ auto ThreadPool::enqueue(F&& f, Args&&... args) -> future<typename result_of<F(A
     condition.notify_one();
     return res;
 }
+
+
+
 
 
 inline ThreadPool::~ThreadPool(){

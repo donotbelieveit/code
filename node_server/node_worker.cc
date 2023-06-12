@@ -458,7 +458,7 @@ class Node final{
         for(int i = 0; i < request->slice_info_size(); i++){
             SliceInfo sliceinfo = request->slice_info(i);
             // sendcopy2 == false，暂时不发送第二个副本
-            thread t(LoadAndSend, sliceinfo, false);
+            thread t(&Node::LoadAndSend, this, sliceinfo, false);
             threads.push_back(t);
         }
 
