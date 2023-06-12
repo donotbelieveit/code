@@ -8,6 +8,8 @@
 #include"sendcopy_client.h"
 #include<unordered_map>
 #include<vector>
+#include<etcd/Client.hpp>
+#include<boost/asio.hpp>
 
 
 #include "alimama.grpc.pb.h"
@@ -198,6 +200,34 @@ class Node final{
     ~Node() {
         server_->Shutdown();
         cq_ptr->Shutdown();
+    }
+
+    void Login(){
+        //获取自身ip
+        boost::asio::io_context io_context;
+        boost::asio::ip::tcp::resolver resolver(io_context);
+        boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
+        boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
+        boost::asio::ip::tcp::resolver::iterator end;
+
+        etcd::Client etcdClient("etcd:2379");
+        while (it != end) {
+            boost::asio::ip::tcp::endpoint endpoint = *it++;
+            cout << "Local IP: " << endpoint.address().to_string() << std::endl;
+
+            //注册
+            string key = "/services/" + std::string("node_worker") ;
+            string value = endpoint.address().to_string()+":"+ server_port;
+            etcd::Response etcdResponse = etcdClient.set(key, value).get();
+
+            if (etcdResponse.is_ok()) {
+                cout << "Service registered successfully: " << key << " -> " << value << std::endl;
+            } else {
+                cerr << "Failed to register service: " << etcdResponse.error_message() << std::endl;
+            
+            }
+
+        }
     }
 
     /*
@@ -490,6 +520,9 @@ class Node final{
 
         server_ = builder.BuildAndStart();
 
+        // 注册到etcd
+        Login();
+
         // 进入死循环等待请求并处理之前先注册一下请求
         {
             HandleSlice2BlockContext* hs2bc = new HandleSlice2BlockContext;
@@ -656,7 +689,7 @@ class Node final{
     }
 
     private:
-        string server_port = "50051";
+        string server_port = "5001";
         // string client_port = "50052";
         int node_name;
 
