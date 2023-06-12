@@ -38,7 +38,7 @@ using alimama::proto::GetBlockDataRequest;
 using alimama::proto::GetBlockDataResponse;
 using alimama::proto::SendCopyRequest;
 using alimama::proto::SendCopyResponse;
-using alimama::proto::LoadAndRemoveRequest;
+using alimama::proto::Slice2BlockRequest;
 using alimama::proto::LoadAndRemoveResponse;
 
 using alimama::proto::NodeService;
@@ -168,8 +168,8 @@ typedef HandleContext<GetBlockDataRequest, GetBlockDataResponse> HandleGetBlockD
 typedef HandleContext<SendCopyRequest, SendCopyResponse> HandleSendCopyContext;
 
 // 处理LoadAndRemove请求
-typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemove1Context;
-typedef HandleContext<LoadAndRemoveRequest, LoadAndRemoveResponse> HandleLoadAndRemove2Context;
+typedef HandleContext<Slice2BlockRequest, LoadAndRemoveResponse> HandleLoadAndRemove1Context;
+typedef HandleContext<Slice2BlockRequest, LoadAndRemoveResponse> HandleLoadAndRemove2Context;
 
 // 处理Slice2Block rpc请求上下文
 typedef HandleContext<Slice2BlockRequest, Slice2BlockResponse> HandleSlice2BlockContext;
@@ -433,7 +433,7 @@ class Node final{
     }
 
     /*
-    LoadAndRemoveRequest{
+    Slice2BlockRequest{
         SliceInfo[] slice_info: 待加载的新版本分片slice信息
     }
 
@@ -451,7 +451,7 @@ class Node final{
         7、pd将所有包含旧版本的请求回复
         8、系统进入新版本
     */
-    Status LoadAndRemove1(ServerContext* context, const LoadAndRemoveRequest* request, LoadAndRemoveResponse* responde) {
+    Status LoadAndRemove1(ServerContext* context, const Slice2BlockRequest* request, LoadAndRemoveResponse* responde) {
         next_version = request->slice_info(0).version();
 
         vector<thread> threads;
@@ -471,7 +471,7 @@ class Node final{
         return Status::OK;
     }
 
-    Status LoadAndRemove2(ServerContext* context, const LoadAndRemoveRequest* request, LoadAndRemoveResponse* responde) {
+    Status LoadAndRemove2(ServerContext* context, const Slice2BlockRequest* request, LoadAndRemoveResponse* responde) {
         BlockInMemory bm = blocks_copy1[next_version];
 
         vector<thread> send_threads;

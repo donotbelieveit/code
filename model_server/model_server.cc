@@ -52,16 +52,17 @@ int BLOCK_SIZE = 6400000;
 //从path获取name
 template<typename T>
 char* get_name(T path){
-    string tmp = "";
-    if(typeid(path)!=std::string){
-        tmp = std::string();
+    std::string tmp = "";
+    if(typeid(path)!=typeid(std::string)){
+        tmp = std::string(path);
     }else{
         tmp = path;
     }
+    std::size_t found = tmp.find_last_of("/");
     if (found != std::string::npos) {
-        return tmp.substr(found + 1);
+        return const_cast<char*>(tmp.substr(found + 1).c_str());
     }
-    return tmp;
+    return const_cast<char*>(tmp.c_str());
 }
 
 void register2etcd(int channel){
@@ -122,10 +123,10 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             return Status::OK;
         }
         //向各节点发送slice信息加载模型
-        bool slice2block(std::unique_ptr<alimama::proto::NodeService::Stub>& stub,Slice2BlockRequest& request){
+        bool slice2block(int index,Slice2BlockRequest request){
             Slice2BlockResponse response;   
             ClientContext context;
-            Status status = stub->Slice2Block(&context,request,&response);
+            Status status = stubs[index]->Slice2Block(&context,request,&response);
             if(status.ok()){
                 return true;
             }
@@ -221,7 +222,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
         //向各节点发送load_and_remove请求
         //阶段1，load新版本，删除旧版本第二副本
         //阶段2，send新版本第二副本，删除旧版本
-        void send_load_and_remove(int index,int step,LoadAndRemoveRequest& request){
+        void send_load_and_remove(int index,int step,Slice2BlockRequest request){
             LoadAndRemoveResponse response;
             ClientContext context;
             Status status;
@@ -235,11 +236,11 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 std::cerr<<"send_load_and_remove error at "<<step<<" on node-"<<index<<std::endl;
             }
         }
-        bool load_and_remove(std::vector<LoadAndRemoveRequest>& request){
+        bool load_and_remove(std::vector<Slice2BlockRequest>& requests){
             //第一阶段，load第一副本，remove旧版本第二副本
             std::vector<std::thread> threads;
             for(int i=0;i<node_num;i++){
-                threads.push_back(std::thread(send_load_and_remove,i,1,request[i]));
+                threads.push_back(std::thread(&Scheduler::send_load_and_remove,this,i,1,requests[i]));
             }
             for(auto& thread:threads){
                 thread.join();
@@ -254,8 +255,8 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
             //第二阶段，send第二副本，remove旧版本第一副本，完成切换
             for(int i=0;i<node_num;i++){
-                LoadAndRemoveRequest request;
-                threads.push_back(std::thread(send_load_and_remove,i,2,request));
+                Slice2BlockRequest request;
+                threads.push_back(std::thread(&Scheduler::send_load_and_remove,this,i,2,request));
             }
             for(auto& thread:threads){
                 thread.join();
@@ -271,11 +272,13 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             block_map2.clear();
             switch_step = 0;
             mtx.unlock();
+            return true;
         }
-        template<typename T>
-        void load_model(std::string version_name,std::unordered_map<int, BlockInfo> &block_map,std::vector<T> request){
+        void load_model(std::string version_name,std::unordered_map<int, BlockInfo> &block_map){
             const char* hdfsUrl = "hdfs://namenode:9000";
             const char* directoryPath = "";  // 要监听的 HDFS 目录路径
+
+            std::vector<Slice2BlockRequest> requests(node_num);
 
             hdfsFS fs = hdfsConnect(hdfsUrl, 0);
             if (fs == NULL) {
@@ -295,7 +298,6 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             if (!file) {
                 std::cerr << "Failed to open file: " << model_meta << std::endl;
                 hdfsDisconnect(fs);
-                return "";
             }
 
             const int bufferSize = 1024;
@@ -304,10 +306,9 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
             // 读取第二行的slice：xxx，size：xxx
             if (hdfsRead(fs, file, buffer, bufferSize) <= 0) {
-                std::cerr << "Failed to read file: " << filePath << std::endl;
+                std::cerr << "Failed to read file: " << model_dir << std::endl;
                 hdfsCloseFile(fs, file);
                 hdfsDisconnect(fs);
-                return "";
             }
 
             // Read the second line
@@ -329,7 +330,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             size_t sizePos = secondLine.find("size:");
 
             if (slicePos != std::string::npos && sizePos != std::string::npos) {
-                std::string size = line.substr(sizePos + 5);
+                std::string size = secondLine.substr(sizePos + 5);
                 slice_size = std::stoi(size);
             }
 
@@ -341,19 +342,19 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
             //将所有slice分成block
             hdfsFileInfo* fileInfoList = nullptr;
-            int numEntries = hdfsListDirectory(fs, directoryPath.c_str(), &fileInfoList);
+            int numEntries = -1;
+            fileInfoList = hdfsListDirectory(fs, directoryPath, &numEntries);
             if (numEntries < 0) {
                 std::cerr << "Failed to list directory: " << directoryPath << std::endl;
                 hdfsDisconnect(fs);
-                return;
             }
 
             for (int i = 0; i < numEntries; ++i) {
                 const hdfsFileInfo& fileInfo = fileInfoList[i];
-                if(std::string(fileInfo.mName()).find("model_slice") != std::string::npos){
+                if(std::string(fileInfo.mName).find("model_slice") != std::string::npos){
                     continue;
                 }
-                std::string slice_name = std::string(get_name(fileInfo.mName()));
+                std::string slice_name = std::string(get_name(fileInfo.mName));
                 std::size_t dotPosition = slice_name.find_last_of('.');
                 int slice_partition = -1;
                 if (dotPosition != std::string::npos && dotPosition < slice_name.length() - 1) {
@@ -378,7 +379,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                     block_map_tmp[slice_partition*1000+i] = block_info;
                     slice_info.add_block_info()->CopyFrom(block_info);
                 }
-                request[slice_partition%node_num].add_slice_info()->CopyFrom(slice_info);
+                requests[slice_partition%node_num].add_slice_info()->CopyFrom(slice_info);
             }
 
             hdfsFreeFileInfo(fileInfoList, numEntries);
@@ -387,7 +388,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             if(num_version==0){
                 std::vector<std::thread> threads;
                 for(int i=0;i<node_num;i++){
-                    threads.push_back(slice2block,stubs[i],request[i]);
+                    threads.push_back(std::thread(&Scheduler::slice2block,this,i,requests[i]));
                 }
                 for(auto&thread:threads){
                     thread.join();
@@ -403,7 +404,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 //load成功，注册
                 register2etcd(4567);
             }else{
-                load_and_remove(request);
+                load_and_remove(requests);
             }
 
             
@@ -463,11 +464,9 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                             hdfsCloseFile(fs, file);
                         }
                         if(num_version==0){
-                            std::vector<Slice2BlockRequest> request(node_num);
-                            load_model(version_name,block_map1,request);
+                            load_model(version_name,block_map1);
                         }else{
-                            std::vector<LoadAndRemoveRequest> request(node_num);
-                            load_model(version_name,block_map2,request);
+                            load_model(version_name,block_map2);
                         }
                         // 在这里处理新文件的逻辑
                     }
@@ -500,7 +499,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 std::unique_ptr<NodeService::Stub> stub(NodeService::NewStub(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials())));
                 stubs.push_back(std::move(stub));
             }
-            std::thread model_monitor_thread(model_monitor,work_dir);
+            std::thread model_monitor_thread(&Scheduler::model_monitor,this,work_dir);
             while(true){
                 std::this_thread::sleep_for(std::chrono::seconds(10));
                 mtx.lock();

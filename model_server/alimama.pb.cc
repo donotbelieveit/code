@@ -475,19 +475,19 @@ const char descriptor_table_protodef_alimama_2eproto[] PROTOBUF_SECTION_VARIABLE
   "\030\001 \003(\0132\030.alimama.proto.SliceInfo\"#\n\025Load"
   "AndRemoveResponse\022\n\n\002ok\030\001 \001(\0102H\n\014ModelSe"
   "rvice\0228\n\003Get\022\026.alimama.proto.Request\032\027.a"
-  "limama.proto.Response\"\0002\315\003\n\013NodeService\022"
+  "limama.proto.Response\"\0002\311\003\n\013NodeService\022"
   "Y\n\014GetBlockData\022\".alimama.proto.GetBlock"
   "DataRequest\032#.alimama.proto.GetBlockData"
   "Response\"\000\022M\n\010SendCopy\022\036.alimama.proto.S"
   "endCopyRequest\032\037.alimama.proto.SendCopyR"
-  "esponse\"\000\022]\n\016LoadAndRemove1\022#.alimama.pr"
-  "oto.LoadAndRemoveRequest\032$.alimama.proto"
-  ".LoadAndRemoveResponse\"\000\022]\n\016LoadAndRemov"
-  "e2\022#.alimama.proto.LoadAndRemoveRequest\032"
-  "$.alimama.proto.LoadAndRemoveResponse\"\000\022"
-  "V\n\013Slice2Block\022!.alimama.proto.Slice2Blo"
-  "ckRequest\032\".alimama.proto.Slice2BlockRes"
-  "ponse\"\000b\006proto3"
+  "esponse\"\000\022[\n\016LoadAndRemove1\022!.alimama.pr"
+  "oto.Slice2BlockRequest\032$.alimama.proto.L"
+  "oadAndRemoveResponse\"\000\022[\n\016LoadAndRemove2"
+  "\022!.alimama.proto.Slice2BlockRequest\032$.al"
+  "imama.proto.LoadAndRemoveResponse\"\000\022V\n\013S"
+  "lice2Block\022!.alimama.proto.Slice2BlockRe"
+  "quest\032\".alimama.proto.Slice2BlockRespons"
+  "e\"\000b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_alimama_2eproto_deps[1] = {
 };
@@ -510,7 +510,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_ali
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_alimama_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_alimama_2eproto = {
-  false, false, descriptor_table_protodef_alimama_2eproto, "alimama.proto", 1575,
+  false, false, descriptor_table_protodef_alimama_2eproto, "alimama.proto", 1571,
   &descriptor_table_alimama_2eproto_once, descriptor_table_alimama_2eproto_sccs, descriptor_table_alimama_2eproto_deps, 15, 0,
   schemas, file_default_instances, TableStruct_alimama_2eproto::offsets,
   file_level_metadata_alimama_2eproto, 15, file_level_enum_descriptors_alimama_2eproto, file_level_service_descriptors_alimama_2eproto,

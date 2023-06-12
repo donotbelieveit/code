@@ -81,7 +81,7 @@ auto ThreadPool::enqueue(F&& f, Args&&... args) -> future<typename result_of<F(A
         bind(forward<F>(f), forward<Args>(args)...)
     );
 
-    future<return_type> res = task->get_future();
+    future<return_type()> res = task->get_future();
     {
         unique_lock<mutex> lock(queue_mutex);
 
