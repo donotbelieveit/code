@@ -45,7 +45,7 @@ using alimama::proto::DataInfo;
 
 
 int NODE_NUM = 6;
-std::string WORK_DIR = "";
+std::string WORK_DIR = "/";
 int BLOCK_SIZE = 6400000;
 
 
