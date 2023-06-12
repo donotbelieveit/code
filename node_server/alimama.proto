@@ -34,7 +34,8 @@ message BlockInfo{
 message SliceInfo {
   string version = 1;
   uint64 slice_partition = 2;
-  repeated BlockInfo block_info = 3;
+  uint64 slice_size = 3;
+  repeated BlockInfo block_info = 4;
 }
 
 message Slice2BlockRequest{

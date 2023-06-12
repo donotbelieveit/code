@@ -91,7 +91,8 @@ ModelService::Service::~Service() {
 static const char* NodeService_method_names[] = {
   "/alimama.proto.NodeService/GetBlockData",
   "/alimama.proto.NodeService/SendCopy",
-  "/alimama.proto.NodeService/LoadAndRemove",
+  "/alimama.proto.NodeService/LoadAndRemove1",
+  "/alimama.proto.NodeService/LoadAndRemove2",
   "/alimama.proto.NodeService/Slice2Block",
 };
 
@@ -104,8 +105,9 @@ std::unique_ptr< NodeService::Stub> NodeService::NewStub(const std::shared_ptr< 
 NodeService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel)
   : channel_(channel), rpcmethod_GetBlockData_(NodeService_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_SendCopy_(NodeService_method_names[1], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_LoadAndRemove_(NodeService_method_names[2], ::grpc::internal::RpcMethod::SERVER_STREAMING, channel)
-  , rpcmethod_Slice2Block_(NodeService_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_LoadAndRemove1_(NodeService_method_names[2], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_LoadAndRemove2_(NodeService_method_names[3], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_Slice2Block_(NodeService_method_names[4], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status NodeService::Stub::GetBlockData(::grpc::ClientContext* context, const ::alimama::proto::GetBlockDataRequest& request, ::alimama::proto::GetBlockDataResponse* response) {
@@ -164,20 +166,60 @@ void NodeService::Stub::experimental_async::SendCopy(::grpc::ClientContext* cont
   return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::alimama::proto::SendCopyResponse>::Create(channel_.get(), cq, rpcmethod_SendCopy_, context, request, false);
 }
 
-::grpc::ClientReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::LoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request) {
-  return ::grpc_impl::internal::ClientReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), rpcmethod_LoadAndRemove_, context, request);
+::grpc::Status NodeService::Stub::LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::alimama::proto::LoadAndRemoveResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_LoadAndRemove1_, context, request, response);
 }
 
-void NodeService::Stub::experimental_async::LoadAndRemove(::grpc::ClientContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::experimental::ClientReadReactor< ::alimama::proto::LoadAndRemoveResponse>* reactor) {
-  ::grpc_impl::internal::ClientCallbackReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove_, context, request, reactor);
+void NodeService::Stub::experimental_async::LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove1_, context, request, response, std::move(f));
 }
 
-::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::AsyncLoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-  return ::grpc_impl::internal::ClientAsyncReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), cq, rpcmethod_LoadAndRemove_, context, request, true, tag);
+void NodeService::Stub::experimental_async::LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove1_, context, request, response, std::move(f));
 }
 
-::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::PrepareAsyncLoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc_impl::internal::ClientAsyncReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), cq, rpcmethod_LoadAndRemove_, context, request, false, nullptr);
+void NodeService::Stub::experimental_async::LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove1_, context, request, response, reactor);
+}
+
+void NodeService::Stub::experimental_async::LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove1_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::AsyncLoadAndRemove1Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), cq, rpcmethod_LoadAndRemove1_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::PrepareAsyncLoadAndRemove1Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), cq, rpcmethod_LoadAndRemove1_, context, request, false);
+}
+
+::grpc::Status NodeService::Stub::LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::alimama::proto::LoadAndRemoveResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_LoadAndRemove2_, context, request, response);
+}
+
+void NodeService::Stub::experimental_async::LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove2_, context, request, response, std::move(f));
+}
+
+void NodeService::Stub::experimental_async::LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove2_, context, request, response, std::move(f));
+}
+
+void NodeService::Stub::experimental_async::LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove2_, context, request, response, reactor);
+}
+
+void NodeService::Stub::experimental_async::LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+  ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_LoadAndRemove2_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::AsyncLoadAndRemove2Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), cq, rpcmethod_LoadAndRemove2_, context, request, true);
+}
+
+::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* NodeService::Stub::PrepareAsyncLoadAndRemove2Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::alimama::proto::LoadAndRemoveResponse>::Create(channel_.get(), cq, rpcmethod_LoadAndRemove2_, context, request, false);
 }
 
 ::grpc::Status NodeService::Stub::Slice2Block(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::alimama::proto::Slice2BlockResponse* response) {
@@ -231,16 +273,26 @@ NodeService::Service::Service() {
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NodeService_method_names[2],
-      ::grpc::internal::RpcMethod::SERVER_STREAMING,
-      new ::grpc::internal::ServerStreamingHandler< NodeService::Service, ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NodeService::Service, ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
           [](NodeService::Service* service,
              ::grpc_impl::ServerContext* ctx,
              const ::alimama::proto::LoadAndRemoveRequest* req,
-             ::grpc_impl::ServerWriter<::alimama::proto::LoadAndRemoveResponse>* writer) {
-               return service->LoadAndRemove(ctx, req, writer);
+             ::alimama::proto::LoadAndRemoveResponse* resp) {
+               return service->LoadAndRemove1(ctx, req, resp);
              }, this)));
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       NodeService_method_names[3],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< NodeService::Service, ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
+          [](NodeService::Service* service,
+             ::grpc_impl::ServerContext* ctx,
+             const ::alimama::proto::LoadAndRemoveRequest* req,
+             ::alimama::proto::LoadAndRemoveResponse* resp) {
+               return service->LoadAndRemove2(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      NodeService_method_names[4],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
       new ::grpc::internal::RpcMethodHandler< NodeService::Service, ::alimama::proto::Slice2BlockRequest, ::alimama::proto::Slice2BlockResponse>(
           [](NodeService::Service* service,
@@ -268,10 +320,17 @@ NodeService::Service::~Service() {
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status NodeService::Service::LoadAndRemove(::grpc::ServerContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* writer) {
+::grpc::Status NodeService::Service::LoadAndRemove1(::grpc::ServerContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response) {
   (void) context;
   (void) request;
-  (void) writer;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status NodeService::Service::LoadAndRemove2(::grpc::ServerContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 

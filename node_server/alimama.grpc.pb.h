@@ -331,14 +331,19 @@ class NodeService final {
     // 接受完成后向pd发送ok，等待1s
     // pd将所有包含旧版本请求回复
     // 系统进入新版本
-    std::unique_ptr< ::grpc::ClientReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> LoadAndRemove(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request) {
-      return std::unique_ptr< ::grpc::ClientReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(LoadAndRemoveRaw(context, request));
+    virtual ::grpc::Status LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::alimama::proto::LoadAndRemoveResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> AsyncLoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(AsyncLoadAndRemove1Raw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> AsyncLoadAndRemove(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(AsyncLoadAndRemoveRaw(context, request, cq, tag));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> PrepareAsyncLoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(PrepareAsyncLoadAndRemove1Raw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> PrepareAsyncLoadAndRemove(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(PrepareAsyncLoadAndRemoveRaw(context, request, cq));
+    virtual ::grpc::Status LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::alimama::proto::LoadAndRemoveResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> AsyncLoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(AsyncLoadAndRemove2Raw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>> PrepareAsyncLoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>>(PrepareAsyncLoadAndRemove2Raw(context, request, cq));
     }
     // 按照version进入版本文件夹，读取指定slice
     // load完slice后，根据block_info将buffer中的data发往指定节点
@@ -386,10 +391,29 @@ class NodeService final {
       // 接受完成后向pd发送ok，等待1s
       // pd将所有包含旧版本请求回复
       // 系统进入新版本
+      virtual void LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) = 0;
       #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
-      virtual void LoadAndRemove(::grpc::ClientContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ClientReadReactor< ::alimama::proto::LoadAndRemoveResponse>* reactor) = 0;
+      virtual void LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       #else
-      virtual void LoadAndRemove(::grpc::ClientContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::experimental::ClientReadReactor< ::alimama::proto::LoadAndRemoveResponse>* reactor) = 0;
+      virtual void LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      #endif
+      #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      virtual void LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      #else
+      virtual void LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      #endif
+      virtual void LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) = 0;
+      #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      virtual void LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      #else
+      virtual void LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
+      #endif
+      #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      virtual void LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      #else
+      virtual void LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) = 0;
       #endif
       // 按照version进入版本文件夹，读取指定slice
       // load完slice后，根据block_info将buffer中的data发往指定节点
@@ -418,9 +442,10 @@ class NodeService final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::GetBlockDataResponse>* PrepareAsyncGetBlockDataRaw(::grpc::ClientContext* context, const ::alimama::proto::GetBlockDataRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::SendCopyResponse>* AsyncSendCopyRaw(::grpc::ClientContext* context, const ::alimama::proto::SendCopyRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::SendCopyResponse>* PrepareAsyncSendCopyRaw(::grpc::ClientContext* context, const ::alimama::proto::SendCopyRequest& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* LoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request) = 0;
-    virtual ::grpc::ClientAsyncReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* AsyncLoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq, void* tag) = 0;
-    virtual ::grpc::ClientAsyncReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* PrepareAsyncLoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* AsyncLoadAndRemove1Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* PrepareAsyncLoadAndRemove1Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* AsyncLoadAndRemove2Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::LoadAndRemoveResponse>* PrepareAsyncLoadAndRemove2Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::Slice2BlockResponse>* AsyncSlice2BlockRaw(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::alimama::proto::Slice2BlockResponse>* PrepareAsyncSlice2BlockRaw(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
@@ -441,14 +466,19 @@ class NodeService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::SendCopyResponse>> PrepareAsyncSendCopy(::grpc::ClientContext* context, const ::alimama::proto::SendCopyRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::SendCopyResponse>>(PrepareAsyncSendCopyRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientReader< ::alimama::proto::LoadAndRemoveResponse>> LoadAndRemove(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request) {
-      return std::unique_ptr< ::grpc::ClientReader< ::alimama::proto::LoadAndRemoveResponse>>(LoadAndRemoveRaw(context, request));
+    ::grpc::Status LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::alimama::proto::LoadAndRemoveResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>> AsyncLoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>>(AsyncLoadAndRemove1Raw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>> AsyncLoadAndRemove(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq, void* tag) {
-      return std::unique_ptr< ::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>>(AsyncLoadAndRemoveRaw(context, request, cq, tag));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>> PrepareAsyncLoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>>(PrepareAsyncLoadAndRemove1Raw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>> PrepareAsyncLoadAndRemove(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>>(PrepareAsyncLoadAndRemoveRaw(context, request, cq));
+    ::grpc::Status LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::alimama::proto::LoadAndRemoveResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>> AsyncLoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>>(AsyncLoadAndRemove2Raw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>> PrepareAsyncLoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>>(PrepareAsyncLoadAndRemove2Raw(context, request, cq));
     }
     ::grpc::Status Slice2Block(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::alimama::proto::Slice2BlockResponse* response) override;
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::alimama::proto::Slice2BlockResponse>> AsyncSlice2Block(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::grpc::CompletionQueue* cq) {
@@ -484,10 +514,29 @@ class NodeService final {
       #else
       void SendCopy(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::SendCopyResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       #endif
+      void LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) override;
+      void LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) override;
       #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
-      void LoadAndRemove(::grpc::ClientContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ClientReadReactor< ::alimama::proto::LoadAndRemoveResponse>* reactor) override;
+      void LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       #else
-      void LoadAndRemove(::grpc::ClientContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::experimental::ClientReadReactor< ::alimama::proto::LoadAndRemoveResponse>* reactor) override;
+      void LoadAndRemove1(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      #endif
+      #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      void LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      #else
+      void LoadAndRemove1(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      #endif
+      void LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) override;
+      void LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, std::function<void(::grpc::Status)>) override;
+      #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      void LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      #else
+      void LoadAndRemove2(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
+      #endif
+      #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      void LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      #else
+      void LoadAndRemove2(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::LoadAndRemoveResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) override;
       #endif
       void Slice2Block(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest* request, ::alimama::proto::Slice2BlockResponse* response, std::function<void(::grpc::Status)>) override;
       void Slice2Block(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::alimama::proto::Slice2BlockResponse* response, std::function<void(::grpc::Status)>) override;
@@ -516,14 +565,16 @@ class NodeService final {
     ::grpc::ClientAsyncResponseReader< ::alimama::proto::GetBlockDataResponse>* PrepareAsyncGetBlockDataRaw(::grpc::ClientContext* context, const ::alimama::proto::GetBlockDataRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::alimama::proto::SendCopyResponse>* AsyncSendCopyRaw(::grpc::ClientContext* context, const ::alimama::proto::SendCopyRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::alimama::proto::SendCopyResponse>* PrepareAsyncSendCopyRaw(::grpc::ClientContext* context, const ::alimama::proto::SendCopyRequest& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientReader< ::alimama::proto::LoadAndRemoveResponse>* LoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request) override;
-    ::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>* AsyncLoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq, void* tag) override;
-    ::grpc::ClientAsyncReader< ::alimama::proto::LoadAndRemoveResponse>* PrepareAsyncLoadAndRemoveRaw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* AsyncLoadAndRemove1Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* PrepareAsyncLoadAndRemove1Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* AsyncLoadAndRemove2Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::alimama::proto::LoadAndRemoveResponse>* PrepareAsyncLoadAndRemove2Raw(::grpc::ClientContext* context, const ::alimama::proto::LoadAndRemoveRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::alimama::proto::Slice2BlockResponse>* AsyncSlice2BlockRaw(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::alimama::proto::Slice2BlockResponse>* PrepareAsyncSlice2BlockRaw(::grpc::ClientContext* context, const ::alimama::proto::Slice2BlockRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetBlockData_;
     const ::grpc::internal::RpcMethod rpcmethod_SendCopy_;
-    const ::grpc::internal::RpcMethod rpcmethod_LoadAndRemove_;
+    const ::grpc::internal::RpcMethod rpcmethod_LoadAndRemove1_;
+    const ::grpc::internal::RpcMethod rpcmethod_LoadAndRemove2_;
     const ::grpc::internal::RpcMethod rpcmethod_Slice2Block_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
@@ -544,7 +595,8 @@ class NodeService final {
     // 接受完成后向pd发送ok，等待1s
     // pd将所有包含旧版本请求回复
     // 系统进入新版本
-    virtual ::grpc::Status LoadAndRemove(::grpc::ServerContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* writer);
+    virtual ::grpc::Status LoadAndRemove1(::grpc::ServerContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response);
+    virtual ::grpc::Status LoadAndRemove2(::grpc::ServerContext* context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response);
     // 按照version进入版本文件夹，读取指定slice
     // load完slice后，根据block_info将buffer中的data发往指定节点
     virtual ::grpc::Status Slice2Block(::grpc::ServerContext* context, const ::alimama::proto::Slice2BlockRequest* request, ::alimama::proto::Slice2BlockResponse* response);
@@ -590,23 +642,43 @@ class NodeService final {
     }
   };
   template <class BaseClass>
-  class WithAsyncMethod_LoadAndRemove : public BaseClass {
+  class WithAsyncMethod_LoadAndRemove1 : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithAsyncMethod_LoadAndRemove() {
+    WithAsyncMethod_LoadAndRemove1() {
       ::grpc::Service::MarkMethodAsync(2);
     }
-    ~WithAsyncMethod_LoadAndRemove() override {
+    ~WithAsyncMethod_LoadAndRemove1() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status LoadAndRemove(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* /*writer*/) override {
+    ::grpc::Status LoadAndRemove1(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestLoadAndRemove(::grpc::ServerContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ServerAsyncWriter< ::alimama::proto::LoadAndRemoveResponse>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(2, context, request, writer, new_call_cq, notification_cq, tag);
+    void RequestLoadAndRemove1(::grpc::ServerContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ServerAsyncResponseWriter< ::alimama::proto::LoadAndRemoveResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_LoadAndRemove2 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_LoadAndRemove2() {
+      ::grpc::Service::MarkMethodAsync(3);
+    }
+    ~WithAsyncMethod_LoadAndRemove2() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status LoadAndRemove2(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestLoadAndRemove2(::grpc::ServerContext* context, ::alimama::proto::LoadAndRemoveRequest* request, ::grpc::ServerAsyncResponseWriter< ::alimama::proto::LoadAndRemoveResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -615,7 +687,7 @@ class NodeService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithAsyncMethod_Slice2Block() {
-      ::grpc::Service::MarkMethodAsync(3);
+      ::grpc::Service::MarkMethodAsync(4);
     }
     ~WithAsyncMethod_Slice2Block() override {
       BaseClassMustBeDerivedFromService(this);
@@ -626,10 +698,10 @@ class NodeService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSlice2Block(::grpc::ServerContext* context, ::alimama::proto::Slice2BlockRequest* request, ::grpc::ServerAsyncResponseWriter< ::alimama::proto::Slice2BlockResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(4, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetBlockData<WithAsyncMethod_SendCopy<WithAsyncMethod_LoadAndRemove<WithAsyncMethod_Slice2Block<Service > > > > AsyncService;
+  typedef WithAsyncMethod_GetBlockData<WithAsyncMethod_SendCopy<WithAsyncMethod_LoadAndRemove1<WithAsyncMethod_LoadAndRemove2<WithAsyncMethod_Slice2Block<Service > > > > > AsyncService;
   template <class BaseClass>
   class ExperimentalWithCallbackMethod_GetBlockData : public BaseClass {
    private:
@@ -725,40 +797,96 @@ class NodeService final {
       { return nullptr; }
   };
   template <class BaseClass>
-  class ExperimentalWithCallbackMethod_LoadAndRemove : public BaseClass {
+  class ExperimentalWithCallbackMethod_LoadAndRemove1 : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    ExperimentalWithCallbackMethod_LoadAndRemove() {
+    ExperimentalWithCallbackMethod_LoadAndRemove1() {
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
       ::grpc::Service::
     #else
       ::grpc::Service::experimental().
     #endif
         MarkMethodCallback(2,
-          new ::grpc_impl::internal::CallbackServerStreamingHandler< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
+          new ::grpc_impl::internal::CallbackUnaryHandler< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
             [this](
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
                    ::grpc::CallbackServerContext*
     #else
                    ::grpc::experimental::CallbackServerContext*
     #endif
-                     context, const ::alimama::proto::LoadAndRemoveRequest* request) { return this->LoadAndRemove(context, request); }));
+                     context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response) { return this->LoadAndRemove1(context, request, response); }));}
+    void SetMessageAllocatorFor_LoadAndRemove1(
+        ::grpc::experimental::MessageAllocator< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>* allocator) {
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(2);
+    #else
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::experimental().GetHandler(2);
+    #endif
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
     }
-    ~ExperimentalWithCallbackMethod_LoadAndRemove() override {
+    ~ExperimentalWithCallbackMethod_LoadAndRemove1() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status LoadAndRemove(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* /*writer*/) override {
+    ::grpc::Status LoadAndRemove1(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
-    virtual ::grpc::ServerWriteReactor< ::alimama::proto::LoadAndRemoveResponse>* LoadAndRemove(
-      ::grpc::CallbackServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/)
+    virtual ::grpc::ServerUnaryReactor* LoadAndRemove1(
+      ::grpc::CallbackServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/)
     #else
-    virtual ::grpc::experimental::ServerWriteReactor< ::alimama::proto::LoadAndRemoveResponse>* LoadAndRemove(
-      ::grpc::experimental::CallbackServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/)
+    virtual ::grpc::experimental::ServerUnaryReactor* LoadAndRemove1(
+      ::grpc::experimental::CallbackServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/)
+    #endif
+      { return nullptr; }
+  };
+  template <class BaseClass>
+  class ExperimentalWithCallbackMethod_LoadAndRemove2 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    ExperimentalWithCallbackMethod_LoadAndRemove2() {
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      ::grpc::Service::
+    #else
+      ::grpc::Service::experimental().
+    #endif
+        MarkMethodCallback(3,
+          new ::grpc_impl::internal::CallbackUnaryHandler< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
+            [this](
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+                   ::grpc::CallbackServerContext*
+    #else
+                   ::grpc::experimental::CallbackServerContext*
+    #endif
+                     context, const ::alimama::proto::LoadAndRemoveRequest* request, ::alimama::proto::LoadAndRemoveResponse* response) { return this->LoadAndRemove2(context, request, response); }));}
+    void SetMessageAllocatorFor_LoadAndRemove2(
+        ::grpc::experimental::MessageAllocator< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>* allocator) {
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(3);
+    #else
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::experimental().GetHandler(3);
+    #endif
+      static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~ExperimentalWithCallbackMethod_LoadAndRemove2() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status LoadAndRemove2(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+    virtual ::grpc::ServerUnaryReactor* LoadAndRemove2(
+      ::grpc::CallbackServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/)
+    #else
+    virtual ::grpc::experimental::ServerUnaryReactor* LoadAndRemove2(
+      ::grpc::experimental::CallbackServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/)
     #endif
       { return nullptr; }
   };
@@ -773,7 +901,7 @@ class NodeService final {
     #else
       ::grpc::Service::experimental().
     #endif
-        MarkMethodCallback(3,
+        MarkMethodCallback(4,
           new ::grpc_impl::internal::CallbackUnaryHandler< ::alimama::proto::Slice2BlockRequest, ::alimama::proto::Slice2BlockResponse>(
             [this](
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
@@ -785,9 +913,9 @@ class NodeService final {
     void SetMessageAllocatorFor_Slice2Block(
         ::grpc::experimental::MessageAllocator< ::alimama::proto::Slice2BlockRequest, ::alimama::proto::Slice2BlockResponse>* allocator) {
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(3);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(4);
     #else
-      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::experimental().GetHandler(3);
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::experimental().GetHandler(4);
     #endif
       static_cast<::grpc_impl::internal::CallbackUnaryHandler< ::alimama::proto::Slice2BlockRequest, ::alimama::proto::Slice2BlockResponse>*>(handler)
               ->SetMessageAllocator(allocator);
@@ -810,10 +938,10 @@ class NodeService final {
       { return nullptr; }
   };
   #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
-  typedef ExperimentalWithCallbackMethod_GetBlockData<ExperimentalWithCallbackMethod_SendCopy<ExperimentalWithCallbackMethod_LoadAndRemove<ExperimentalWithCallbackMethod_Slice2Block<Service > > > > CallbackService;
+  typedef ExperimentalWithCallbackMethod_GetBlockData<ExperimentalWithCallbackMethod_SendCopy<ExperimentalWithCallbackMethod_LoadAndRemove1<ExperimentalWithCallbackMethod_LoadAndRemove2<ExperimentalWithCallbackMethod_Slice2Block<Service > > > > > CallbackService;
   #endif
 
-  typedef ExperimentalWithCallbackMethod_GetBlockData<ExperimentalWithCallbackMethod_SendCopy<ExperimentalWithCallbackMethod_LoadAndRemove<ExperimentalWithCallbackMethod_Slice2Block<Service > > > > ExperimentalCallbackService;
+  typedef ExperimentalWithCallbackMethod_GetBlockData<ExperimentalWithCallbackMethod_SendCopy<ExperimentalWithCallbackMethod_LoadAndRemove1<ExperimentalWithCallbackMethod_LoadAndRemove2<ExperimentalWithCallbackMethod_Slice2Block<Service > > > > > ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetBlockData : public BaseClass {
    private:
@@ -849,18 +977,35 @@ class NodeService final {
     }
   };
   template <class BaseClass>
-  class WithGenericMethod_LoadAndRemove : public BaseClass {
+  class WithGenericMethod_LoadAndRemove1 : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithGenericMethod_LoadAndRemove() {
+    WithGenericMethod_LoadAndRemove1() {
       ::grpc::Service::MarkMethodGeneric(2);
     }
-    ~WithGenericMethod_LoadAndRemove() override {
+    ~WithGenericMethod_LoadAndRemove1() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status LoadAndRemove(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* /*writer*/) override {
+    ::grpc::Status LoadAndRemove1(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_LoadAndRemove2 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_LoadAndRemove2() {
+      ::grpc::Service::MarkMethodGeneric(3);
+    }
+    ~WithGenericMethod_LoadAndRemove2() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status LoadAndRemove2(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -871,7 +1016,7 @@ class NodeService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithGenericMethod_Slice2Block() {
-      ::grpc::Service::MarkMethodGeneric(3);
+      ::grpc::Service::MarkMethodGeneric(4);
     }
     ~WithGenericMethod_Slice2Block() override {
       BaseClassMustBeDerivedFromService(this);
@@ -923,23 +1068,43 @@ class NodeService final {
     }
   };
   template <class BaseClass>
-  class WithRawMethod_LoadAndRemove : public BaseClass {
+  class WithRawMethod_LoadAndRemove1 : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawMethod_LoadAndRemove() {
+    WithRawMethod_LoadAndRemove1() {
       ::grpc::Service::MarkMethodRaw(2);
     }
-    ~WithRawMethod_LoadAndRemove() override {
+    ~WithRawMethod_LoadAndRemove1() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status LoadAndRemove(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* /*writer*/) override {
+    ::grpc::Status LoadAndRemove1(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestLoadAndRemove(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncWriter< ::grpc::ByteBuffer>* writer, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncServerStreaming(2, context, request, writer, new_call_cq, notification_cq, tag);
+    void RequestLoadAndRemove1(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_LoadAndRemove2 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_LoadAndRemove2() {
+      ::grpc::Service::MarkMethodRaw(3);
+    }
+    ~WithRawMethod_LoadAndRemove2() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status LoadAndRemove2(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestLoadAndRemove2(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -948,7 +1113,7 @@ class NodeService final {
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithRawMethod_Slice2Block() {
-      ::grpc::Service::MarkMethodRaw(3);
+      ::grpc::Service::MarkMethodRaw(4);
     }
     ~WithRawMethod_Slice2Block() override {
       BaseClassMustBeDerivedFromService(this);
@@ -959,7 +1124,7 @@ class NodeService final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     void RequestSlice2Block(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
-      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
+      ::grpc::Service::RequestAsyncUnary(4, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -1039,40 +1204,78 @@ class NodeService final {
       { return nullptr; }
   };
   template <class BaseClass>
-  class ExperimentalWithRawCallbackMethod_LoadAndRemove : public BaseClass {
+  class ExperimentalWithRawCallbackMethod_LoadAndRemove1 : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    ExperimentalWithRawCallbackMethod_LoadAndRemove() {
+    ExperimentalWithRawCallbackMethod_LoadAndRemove1() {
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
       ::grpc::Service::
     #else
       ::grpc::Service::experimental().
     #endif
         MarkMethodRawCallback(2,
-          new ::grpc_impl::internal::CallbackServerStreamingHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+          new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
                    ::grpc::CallbackServerContext*
     #else
                    ::grpc::experimental::CallbackServerContext*
     #endif
-                     context, const::grpc::ByteBuffer* request) { return this->LoadAndRemove(context, request); }));
+                     context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->LoadAndRemove1(context, request, response); }));
     }
-    ~ExperimentalWithRawCallbackMethod_LoadAndRemove() override {
+    ~ExperimentalWithRawCallbackMethod_LoadAndRemove1() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status LoadAndRemove(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* /*writer*/) override {
+    ::grpc::Status LoadAndRemove1(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
-    virtual ::grpc::ServerWriteReactor< ::grpc::ByteBuffer>* LoadAndRemove(
-      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/)
+    virtual ::grpc::ServerUnaryReactor* LoadAndRemove1(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)
     #else
-    virtual ::grpc::experimental::ServerWriteReactor< ::grpc::ByteBuffer>* LoadAndRemove(
-      ::grpc::experimental::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/)
+    virtual ::grpc::experimental::ServerUnaryReactor* LoadAndRemove1(
+      ::grpc::experimental::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)
+    #endif
+      { return nullptr; }
+  };
+  template <class BaseClass>
+  class ExperimentalWithRawCallbackMethod_LoadAndRemove2 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    ExperimentalWithRawCallbackMethod_LoadAndRemove2() {
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+      ::grpc::Service::
+    #else
+      ::grpc::Service::experimental().
+    #endif
+        MarkMethodRawCallback(3,
+          new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+                   ::grpc::CallbackServerContext*
+    #else
+                   ::grpc::experimental::CallbackServerContext*
+    #endif
+                     context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->LoadAndRemove2(context, request, response); }));
+    }
+    ~ExperimentalWithRawCallbackMethod_LoadAndRemove2() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status LoadAndRemove2(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
+    virtual ::grpc::ServerUnaryReactor* LoadAndRemove2(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)
+    #else
+    virtual ::grpc::experimental::ServerUnaryReactor* LoadAndRemove2(
+      ::grpc::experimental::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)
     #endif
       { return nullptr; }
   };
@@ -1087,7 +1290,7 @@ class NodeService final {
     #else
       ::grpc::Service::experimental().
     #endif
-        MarkMethodRawCallback(3,
+        MarkMethodRawCallback(4,
           new ::grpc_impl::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
     #ifdef GRPC_CALLBACK_API_NONEXPERIMENTAL
@@ -1169,12 +1372,66 @@ class NodeService final {
     virtual ::grpc::Status StreamedSendCopy(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::alimama::proto::SendCopyRequest,::alimama::proto::SendCopyResponse>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
+  class WithStreamedUnaryMethod_LoadAndRemove1 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_LoadAndRemove1() {
+      ::grpc::Service::MarkMethodStreamed(2,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
+            [this](::grpc_impl::ServerContext* context,
+                   ::grpc_impl::ServerUnaryStreamer<
+                     ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>* streamer) {
+                       return this->StreamedLoadAndRemove1(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_LoadAndRemove1() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status LoadAndRemove1(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedLoadAndRemove1(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::alimama::proto::LoadAndRemoveRequest,::alimama::proto::LoadAndRemoveResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_LoadAndRemove2 : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_LoadAndRemove2() {
+      ::grpc::Service::MarkMethodStreamed(3,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
+            [this](::grpc_impl::ServerContext* context,
+                   ::grpc_impl::ServerUnaryStreamer<
+                     ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>* streamer) {
+                       return this->StreamedLoadAndRemove2(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_LoadAndRemove2() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status LoadAndRemove2(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::alimama::proto::LoadAndRemoveResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedLoadAndRemove2(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::alimama::proto::LoadAndRemoveRequest,::alimama::proto::LoadAndRemoveResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_Slice2Block : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
     WithStreamedUnaryMethod_Slice2Block() {
-      ::grpc::Service::MarkMethodStreamed(3,
+      ::grpc::Service::MarkMethodStreamed(4,
         new ::grpc::internal::StreamedUnaryHandler<
           ::alimama::proto::Slice2BlockRequest, ::alimama::proto::Slice2BlockResponse>(
             [this](::grpc_impl::ServerContext* context,
@@ -1195,36 +1452,9 @@ class NodeService final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedSlice2Block(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::alimama::proto::Slice2BlockRequest,::alimama::proto::Slice2BlockResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetBlockData<WithStreamedUnaryMethod_SendCopy<WithStreamedUnaryMethod_Slice2Block<Service > > > StreamedUnaryService;
-  template <class BaseClass>
-  class WithSplitStreamingMethod_LoadAndRemove : public BaseClass {
-   private:
-    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
-   public:
-    WithSplitStreamingMethod_LoadAndRemove() {
-      ::grpc::Service::MarkMethodStreamed(2,
-        new ::grpc::internal::SplitServerStreamingHandler<
-          ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>(
-            [this](::grpc_impl::ServerContext* context,
-                   ::grpc_impl::ServerSplitStreamer<
-                     ::alimama::proto::LoadAndRemoveRequest, ::alimama::proto::LoadAndRemoveResponse>* streamer) {
-                       return this->StreamedLoadAndRemove(context,
-                         streamer);
-                  }));
-    }
-    ~WithSplitStreamingMethod_LoadAndRemove() override {
-      BaseClassMustBeDerivedFromService(this);
-    }
-    // disable regular version of this method
-    ::grpc::Status LoadAndRemove(::grpc::ServerContext* /*context*/, const ::alimama::proto::LoadAndRemoveRequest* /*request*/, ::grpc::ServerWriter< ::alimama::proto::LoadAndRemoveResponse>* /*writer*/) override {
-      abort();
-      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
-    }
-    // replace default version of method with split streamed
-    virtual ::grpc::Status StreamedLoadAndRemove(::grpc::ServerContext* context, ::grpc::ServerSplitStreamer< ::alimama::proto::LoadAndRemoveRequest,::alimama::proto::LoadAndRemoveResponse>* server_split_streamer) = 0;
-  };
-  typedef WithSplitStreamingMethod_LoadAndRemove<Service > SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetBlockData<WithStreamedUnaryMethod_SendCopy<WithSplitStreamingMethod_LoadAndRemove<WithStreamedUnaryMethod_Slice2Block<Service > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetBlockData<WithStreamedUnaryMethod_SendCopy<WithStreamedUnaryMethod_LoadAndRemove1<WithStreamedUnaryMethod_LoadAndRemove2<WithStreamedUnaryMethod_Slice2Block<Service > > > > > StreamedUnaryService;
+  typedef Service SplitStreamedService;
+  typedef WithStreamedUnaryMethod_GetBlockData<WithStreamedUnaryMethod_SendCopy<WithStreamedUnaryMethod_LoadAndRemove1<WithStreamedUnaryMethod_LoadAndRemove2<WithStreamedUnaryMethod_Slice2Block<Service > > > > > StreamedService;
 };
 
 }  // namespace proto
