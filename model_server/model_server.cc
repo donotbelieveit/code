@@ -18,6 +18,8 @@
 #include <boost/asio.hpp>
 #include <mutex>
 #include <etcd/Client.hpp>
+#include <string>
+#include <cstring> 
 
 namespace fs = std::filesystem;
 
@@ -57,19 +59,38 @@ bool startsWith(const std::string& str, const std::string& prefix) {
 }
 
 //从path获取name
-template<typename T>
-char* get_name(T path){
+// template<typename T>
+// char* get_name(T path){
+//     std::string tmp = "";
+//     if(typeid(path)!=typeid(std::string)){
+//         tmp = std::string(path);
+//     }else{
+//         tmp = path;
+//     }
+//     std::size_t found = tmp.find_last_of("/");
+//     if (found != std::string::npos) {
+//         return const_cast<char*>(tmp.substr(found + 1).c_str());
+//     }
+//     return const_cast<char*>(tmp.c_str());
+// }
+template <typename T>
+const char* get_name(T path) {
     std::string tmp = "";
-    if(typeid(path)!=typeid(std::string)){
+    if (typeid(path) != typeid(std::string)) {
         tmp = std::string(path);
-    }else{
+    } else {
         tmp = path;
     }
     std::size_t found = tmp.find_last_of("/");
     if (found != std::string::npos) {
-        return const_cast<char*>(tmp.substr(found + 1).c_str());
+        std::string fileName = tmp.substr(found + 1);
+        char* result = new char[fileName.length() + 1];
+        std::strcpy(result, fileName.c_str());
+        return result;
     }
-    return const_cast<char*>(tmp.c_str());
+    char* result = new char[tmp.length() + 1];
+    std::strcpy(result, tmp.c_str());
+    return result;
 }
 
 void register2etcd(int channel){
@@ -293,10 +314,11 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             }
             std::string model_dir = std::string(directoryPath) + "/" + version_name;
             //监听model.done文件    
-            while(!hdfsExists(fs, (model_dir+"/model.done").c_str())){
-                std::cout<<"waiting for model done"<<std::endl;
+            while(hdfsExists(fs, (model_dir+"/model.done").c_str())!=0){
+                std::cout<<"waiting for model done:"+model_dir+"/model.done"<<std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(10)); 
             }
+            std::cout<<"find model done:"+model_dir+"/model.done"<<std::endl;
 
             //读取meta文件
             std::string model_meta = model_dir+"/model.meta";
@@ -350,21 +372,22 @@ class Scheduler final : public alimama::proto::ModelService::Service{
             //将所有slice分成block
             hdfsFileInfo* fileInfoList = nullptr;
             int numEntries = -1;
-            fileInfoList = hdfsListDirectory(fs, directoryPath, &numEntries);
+            fileInfoList = hdfsListDirectory(fs, model_dir.c_str(), &numEntries);
             if (numEntries < 0) {
                 std::cerr << "Failed to list directory: " << directoryPath << std::endl;
                 hdfsDisconnect(fs);
             }
-
+            //std::cout << "find slices" <<std::endl;
             for (int i = 0; i < numEntries; ++i) {
                 const hdfsFileInfo& fileInfo = fileInfoList[i];
-                if(std::string(fileInfo.mName).find("model_slice") != std::string::npos){
+                if(std::string(fileInfo.mName).find("model_slice") == std::string::npos){
                     continue;
                 }
                 std::string slice_name = std::string(get_name(fileInfo.mName));
                 std::size_t dotPosition = slice_name.find_last_of('.');
                 int slice_partition = -1;
                 if (dotPosition != std::string::npos && dotPosition < slice_name.length() - 1) {
+                    std::cout << "slice name: " << slice_name << std::endl;
                     slice_partition = std::stoi(slice_name.substr(dotPosition + 1));
                 }
                 
@@ -391,6 +414,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
             hdfsFreeFileInfo(fileInfoList, numEntries);
             hdfsDisconnect(fs);
+            block_map = block_map_tmp;
             //将block分配给node
             if(num_version==0){
                 std::vector<std::thread> threads;
@@ -405,11 +429,11 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 
                 mtx.lock();
                 num_version++;
+                std::cout<<"finished first load"<<std::endl;
                 version1 = version_name;
                 mtx.unlock();
 
-                //load成功，注册
-                register2etcd(4567);
+                
             }else{
                 load_and_remove(requests);
             }
@@ -446,7 +470,6 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                     std::string fileName(fileNameChars);
                     std::cout << "current file names: " << fileName << std::endl;
                     if(!(startsWith(fileName,prefix1)||startsWith(fileName,prefix2))){
-                        delete[] fileNameChars;
                         continue;
                     }
 
@@ -546,12 +569,15 @@ class Scheduler final : public alimama::proto::ModelService::Service{
 };
 
 int main() {
+    setenv("LIBHDFS_OPTS", "-Dfile.encoding=UTF-8", 1);
     Scheduler service = Scheduler();
     std::string server_address("node-1:4567");
     ServerBuilder builder;
     builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<Server> server(builder.BuildAndStart());
+   //注册
+    register2etcd(4567);
     server->Wait();
     return 0;
 }

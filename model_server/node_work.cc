@@ -262,8 +262,8 @@ class Node final{
     void LoadAndSend(SliceInfo sliceinfo, bool sendcopy2){
         string version = sliceinfo.version();
         int slice = sliceinfo.slice_partition();
-        // string filename = local_path + "/" + version + "/";
-        string filename = version + "/";
+        string filename = local_path + "/" + version + "/";
+       // string filename = version + "/";
 
         DIR *dir;
         // dir is not exist, new version is coming, load from hdfs
