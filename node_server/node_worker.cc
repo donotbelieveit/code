@@ -74,7 +74,11 @@ void DownloadFileFromHDFS(string version){
 
     // 将新版本文件从hdfs下载到本地磁盘
     string hdfs_command = "hdfs dfs -fs hdfs://namenode:9000/ -get /" + version + " " + local_path;
+    std::cout<<hdfs_command<<std::endl;
+    string hdfs_ls = "hdfs dfs -fs hdfs://namenode:9000/ -ls /";
+    Command(hdfs_ls);
     Command(hdfs_command);
+    std::cout<<"download succeessfully!"<<std::endl;
 }
 
 // 计算指定slice号和slice内index号的数据块在整个版本数据中的实际块号

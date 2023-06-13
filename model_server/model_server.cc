@@ -363,7 +363,7 @@ class Scheduler final : public alimama::proto::ModelService::Service{
                 slice_size = std::stoi(size);
             }
 
-            std::map<int,BlockInfo> block_map_tmp;
+            std::unordered_map<int,BlockInfo> block_map_tmp;
             //random(1,node,num)
             std::random_device rd;
             std::mt19937 gen(rd());
